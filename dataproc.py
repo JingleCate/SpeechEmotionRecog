@@ -3,6 +3,10 @@ import librosa
 import pandas as pd
 import csv
 import numpy as np
+import random
+import torch
+
+from tqdm import tqdm
 
 
 def split_dataset(ratio: float, path: str, output_path: str):
@@ -22,8 +26,11 @@ def split_dataset(ratio: float, path: str, output_path: str):
         for root, dirs, files in os.walk(path):
             # print(root, dirs, files, end="\n")
             train_size = int(len(files) * train_ratio)
-            valid_size = test_size =  int(len(files) - train_size)//2
+            valid_size = test_size = int(len(files) - train_size)//2
             count = 0
+            # shuffle the files
+            random.shuffle(files)
+
             for file in files:
                 count += 1
                 if count <= train_size:
@@ -54,7 +61,6 @@ def split_dataset(ratio: float, path: str, output_path: str):
                 statement.append(split_fname[4])
                 actor.append(split_fname[6])
 
-
     df = pd.DataFrame({
         'path': file_path,
         'channel': channel,
@@ -66,13 +72,15 @@ def split_dataset(ratio: float, path: str, output_path: str):
     })
     df.to_csv(output_path)
 
+
 def output_each_set(loaded_path: str, output_path: str):
-    header = ['path', 'channel', 'emotion', 'e-intensity', 'statement', 'actor', 'split']
+    header = ['path', 'channel', 'emotion',
+              'e-intensity', 'statement', 'actor', 'split']
     train_path = os.path.join(output_path, 'train/train.csv')
     val_path = os.path.join(output_path, 'val/val.csv')
     test_path = os.path.join(output_path, 'test/test.csv')
     train_csv, val_csv, test_csv = [], [], []
-    train_csv.append(header) 
+    train_csv.append(header)
     val_csv.append(header)
     test_csv.append(header)
 
@@ -89,7 +97,7 @@ def output_each_set(loaded_path: str, output_path: str):
                 val_csv.append(row)
             elif row[-1] == '03':
                 test_csv.append(row)
-    
+
     # print(val_csv)
     with open(train_path, 'w', newline='') as f:
         writer = csv.writer(f, delimiter=',')
@@ -105,7 +113,7 @@ def output_each_set(loaded_path: str, output_path: str):
             writer.writerow(row)
 
 
-def extract_feature(set_path: str, output_path: str, catagory: str) :
+def extract_feature(set_path: str, output_path: str, catagory: str):
     """Extract features from audio files from a set of train set or validation set or test set.
 
     Args:
@@ -119,33 +127,80 @@ def extract_feature(set_path: str, output_path: str, catagory: str) :
     with open(set_path, mode="r") as f:
         reader = csv.reader(f, delimiter=',')
         is_print = True
-        for row in reader:
+        for row in tqdm(reader):
             if row[0] == "path":
                 continue
             audio_path = row[0]
-            X, sample_rate = librosa.load(audio_path, sr=44100, offset=0.5, duration=2.5)  # sr = None means take original sample  rate
-            mfccs = librosa.feature.mfcc(y=X, sr=sample_rate, n_mfcc=13)    # this audio's mfcc, 2-dims
+            # sr = None means take original sample  rate
+            X, sample_rate = librosa.load(
+                audio_path, sr=44100, offset=0.5, duration=2.5)
+            # this audio's mfcc, 2-dims
+            mfccs = librosa.feature.mfcc(y=X, sr=sample_rate, n_mfcc=13)
             feat = np.mean(mfccs, axis=0)   # simplify to 1-dim
             if is_print:
-                print("One audio file mfcc size: ", mfccs.shape)  # mfccs.shape is like (13, 216)
-                print("Simplified feature size: ", feat.shape)   # feat.shape is like (216, )
+                # mfccs.shape is like (13, 216)
+                print("One audio file mfcc size: ", mfccs.shape)
+                # feat.shape is like (216, )
+                print("Simplified feature size: ", feat.shape)
                 is_print = False
             # padding 0 if not 216
-            if len(feat)!= 216:
-                feat = np.pad(feat, (0, 216 - len(feat)), 'constant', constant_values=0)
+            if len(feat) != 216:
+                feat = np.pad(feat, (0, 216 - len(feat)),
+                              'constant', constant_values=0)
                 # print(feat, feat.shape)
+            feat = feat.tolist()    # convert to list
+            feat.append(row[2])     # Add lable
             features.append(feat)
-    
-    print(catagory + " features shape: ", np.array(features).shape) # features 
+
+    print(catagory + " features shape(label added): ",
+          np.array(features).shape)  # features
     with open(output_path, mode='w', newline='') as f:
         writer = csv.writer(f, delimiter=',')
         for feat in features:
             writer.writerow(feat)
     print("----------------- "+catagory+" ---------------------")
 
-if __name__ == '__main__':
-    # split_dataset(ratio=0.8, path="./datasets/archive", output_path="./dataproc.csv")
-    # output_each_set(loaded_path="./dataproc.csv", output_path="./datasets")
-    extract_feature(set_path="./datasets/train/train.csv", output_path="./datasets/train/feats.csv", catagory="Train set")
-    extract_feature(set_path="./datasets/val/val.csv", output_path="./datasets/val/feats.csv", catagory="Valid set")
-    extract_feature(set_path="./datasets/test/test.csv", output_path="./datasets/test/feats.csv", catagory="Test set")
+def extract_features_of_batch(paths: list, is_print: bool = False) -> torch.Tensor:
+    """Extract features of a path list from a batch.
+
+    Args:
+        paths (list): Paths list.
+        is_print (bool, optional): Whether to print the feature shape.. Defaults to False.
+
+    Returns:
+        FloatTensor: Extracted features.
+    """
+    features = []
+    for path in paths:
+        X, sample_rate = librosa.load(path, sr=44100, offset=0.5, duration=2.5)
+        # this audio's mfcc, 2-dims
+        mfccs = librosa.feature.mfcc(y=X, sr=sample_rate, n_mfcc=13)
+        feat = np.mean(mfccs, axis=0)   # simplify to 1-dim
+        if is_print:
+            # mfccs.shape is like (13, 216)
+            print("One audio file mfcc size: ", mfccs.shape)
+            # feat.shape is like (216, )
+            print("Simplified feature size: ", feat.shape)
+            is_print = False
+        # padding 0 if not 216 because duration 2.5s is just converting to 216 frames.
+        if len(feat) != 216:
+            feat = np.pad(feat, (0, 216 - len(feat)), 'constant', constant_values=0)
+        features.append(feat)
+    
+    return torch.FloatTensor(np.array(features))
+        
+
+
+
+
+
+# if __name__ == '__main__':
+#     split_dataset(ratio=0.8, path="./datasets/archive",
+#                   output_path="./dataproc.csv")
+#     output_each_set(loaded_path="./dataproc.csv", output_path="./datasets")
+#     extract_feature(set_path="./datasets/train/train.csv",
+#                     output_path="./datasets/train/feats.csv", catagory="Train set")
+#     extract_feature(set_path="./datasets/val/val.csv",
+#                     output_path="./datasets/val/feats.csv", catagory="Valid set")
+#     extract_feature(set_path="./datasets/test/test.csv",
+#                     output_path="./datasets/test/feats.csv", catagory="Test set")

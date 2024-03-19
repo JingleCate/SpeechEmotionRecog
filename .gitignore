@@ -1,2 +1,4 @@
 myenv/
 datasets/archive/
+tests/
+*.log
