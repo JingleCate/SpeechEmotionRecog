@@ -176,31 +176,34 @@ def extract_features_of_batch(paths: list, is_print: bool = False) -> torch.Tens
         # this audio's mfcc, 2-dims
         mfccs = librosa.feature.mfcc(y=X, sr=sample_rate, n_mfcc=13)
         feat = np.mean(mfccs, axis=0)   # simplify to 1-dim
+        
+        # padding 0 if not 216 because duration 2.5s is just converting to 216 frames.
+        if len(feat) != 216:
+            feat = np.pad(feat, (0, 216 - len(feat)), 'constant', constant_values=0)
+        feat = feat.reshape((216, 1))
+        features.append(feat)
         if is_print:
             # mfccs.shape is like (13, 216)
             print("One audio file mfcc size: ", mfccs.shape)
             # feat.shape is like (216, )
             print("Simplified feature size: ", feat.shape)
             is_print = False
-        # padding 0 if not 216 because duration 2.5s is just converting to 216 frames.
-        if len(feat) != 216:
-            feat = np.pad(feat, (0, 216 - len(feat)), 'constant', constant_values=0)
-        features.append(feat)
     
-    return torch.FloatTensor(np.array(features))
+    # 转置输出列向量
+    return torch.Tensor(np.array(features))
         
 
 
 
 
 
-# if __name__ == '__main__':
-#     split_dataset(ratio=0.8, path="./datasets/archive",
-#                   output_path="./dataproc.csv")
-#     output_each_set(loaded_path="./dataproc.csv", output_path="./datasets")
-#     extract_feature(set_path="./datasets/train/train.csv",
-#                     output_path="./datasets/train/feats.csv", catagory="Train set")
-#     extract_feature(set_path="./datasets/val/val.csv",
-#                     output_path="./datasets/val/feats.csv", catagory="Valid set")
-#     extract_feature(set_path="./datasets/test/test.csv",
-#                     output_path="./datasets/test/feats.csv", catagory="Test set")
+if __name__ == '__main__':
+    split_dataset(ratio=0.8, path="./datasets/archive",
+                  output_path="./dataproc.csv")
+    output_each_set(loaded_path="./dataproc.csv", output_path="./datasets")
+    extract_feature(set_path="./datasets/train/train.csv",
+                    output_path="./datasets/train/feats.csv", catagory="Train set")
+    extract_feature(set_path="./datasets/val/val.csv",
+                    output_path="./datasets/val/feats.csv", catagory="Valid set")
+    extract_feature(set_path="./datasets/test/test.csv",
+                    output_path="./datasets/test/feats.csv", catagory="Test set")

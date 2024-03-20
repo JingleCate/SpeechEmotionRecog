@@ -2,6 +2,7 @@ audioread==3.0.1
 certifi==2024.2.2
 cffi==1.16.0
 charset-normalizer==3.3.2
+colorama==0.4.6
 contourpy==1.1.1
 cycler==0.12.1
 decorator==5.1.1
@@ -44,6 +45,7 @@ threadpoolctl==3.3.0
 torch==2.2.1+cu118
 torchaudio==2.2.1+cu118
 torchvision==0.17.1+cu118
+tqdm==4.66.2
 typing-extensions==4.8.0
 tzdata==2024.1
 urllib3==2.2.1

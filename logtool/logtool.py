@@ -28,7 +28,7 @@ def log(T: str, message: str = ''):
         def wrapper(*args, **kwargs):
             time = datetime.datetime.now()
             print(icons[T], time, " @file[" + file + "] ", " @method[" + func.__name__ + "]", sep=' ')
-            print("💻 [Message]   ⏩", message, end="⏪\n")
+            print("💻 [Message]   ⏩", message, end=" ⏪\n")
          
             print("✂ ", '-' * (terminal_legnth - 2), sep='')
             ret = func(*args, **kwargs)
