@@ -1,4 +1,5 @@
 myenv/
-datasets/archive/
+# datasets/archive/
 tests/
 *.log
+__pycache__/

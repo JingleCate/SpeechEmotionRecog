@@ -22,13 +22,13 @@ def train(
 ):  
     print("🔢 " + f"Using {device}.")
     # load train data
-    train_dataset = SpeechDataset(r"datasets\train\train.csv")
+    train_dataset = SpeechDataset(r"datasets/train/train.csv")
     train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
     # load validation data
-    val_dataset = SpeechDataset(r"datasets\val\val.csv")
+    val_dataset = SpeechDataset(r"datasets/val/val.csv")
     val_dataloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
     # load test data
-    test_dataset = SpeechDataset(r"datasets\test\test.csv")
+    test_dataset = SpeechDataset(r"datasets/test/test.csv")
     test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
 
     # 定义模型
@@ -92,5 +92,5 @@ def train(
 
 if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    train(device=device, batch_size=8)
+    train(device=device, batch_size=8, epochs=500)
     pass
