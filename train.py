@@ -89,8 +89,9 @@ def train(
                     total += labels.size(0)
                     right += (predict == labels).sum().item()
             print("Accuracy of SSRNetwork on the validation set: %.3f %%" % (100 * right / total))
+        if epoch % 50 == 49:
+            torch.save(net.state_dict(), r"model/SSR_epoch_%d.pth" % (epoch + 1))
 
 if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     train(device=device, batch_size=8, epochs=500)
-    pass
