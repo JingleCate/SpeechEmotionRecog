@@ -3,3 +3,4 @@ myenv/
 tests/
 *.log
 __pycache__/
+*/__pycache__/
