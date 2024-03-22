@@ -13,7 +13,13 @@ pip freeze > requirements.txt
 pip install -r requirement.txt
 
 #    git tips
-# keywords: feat/fix/optim...
+# commit standard
+# keywords: feat/fix/optim/modify
 
 # 推送到gitee
 git push -f git@gitee.com:jinglecath/SpeechEmotionRecog.git
+
+# 运行
+python train.py --help
+
+python train.py --epochs 5000 --batch_size 4 --use_checkpoint True --checkpoint_path  "checkpoints/SSR_epoch_1200.pth"

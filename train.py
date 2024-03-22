@@ -23,6 +23,7 @@ def train(
         num_workers=0,
         use_checkpoint: bool=False,
         checkpoint_path: str = "checkpoint/checkpoint.pth",
+        learning_rate: float = 0.001,
         **kwargs
 ):  
     print("🔢 " + f"Using {device}.")
@@ -41,13 +42,15 @@ def train(
     net.to(device)
     # 定义损失策略和优化器
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
+    # TODO 优化optimizer
+    # optimizer = optim.SGD(net.parameters(), lr=learning_rate, momentum=momentum)
+    optimizer = optim.Adam(net.parameters(), lr=learning_rate, eps=1e-8)
     # TODO load checkpoint and why?
     if use_checkpoint:
         checkpoint = torch.load(checkpoint_path)
         net.load_state_dict(checkpoint['model_state_dict'])
         net.eval()
-        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        # optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
         epochs = checkpoint['epoch'] - 1
         loaded_loss = checkpoint['average_loss']
 
@@ -64,7 +67,7 @@ def train(
             paths, labels = sample_batch["path"], (sample_batch["label"] - 1).to(device)
             # extract features, Simplified feature size:  (bacth_size, 216) 
             feats = extract_features_of_batch(paths, is_print=False).to(device) # to same device
-            print(feats, feats.shape)
+            # print(feats, feats.shape)
             # return
 
             # Optimizing
@@ -114,7 +117,7 @@ def train(
                 "model_state_dict": net.state_dict(),
                 "optimizer_state_dict": optimizer.state_dict(),
                 "average_loss": running_loss/counter
-            }, r"checkpoints/SSR_epoch_%d_acc_%d.pth" % (epoch + 1, correct_rate))
+            }, r"checkpoints/SSR_epoch_%d_acc_%.3f.pth" % (epoch + 1, correct_rate))
 
         counter = 0
         running_loss = 0
@@ -124,19 +127,22 @@ def train(
     df2.to_csv("./records/acc.csv", mode='a')
 
 if __name__ == "__main__":
-    os.system("python dataproc.py")         # execute this program to get the dataset paths.
     parser = argparse.ArgumentParser("Training model...")
     parser.add_argument("--epochs", type=int, default=100, help="number of epochs, default is 100.")
     parser.add_argument("--batch_size", type=int, default=1, help="batch size, default is 1.")
     parser.add_argument("--num_workers", type=int, default=0, help="number of workers for data loading, default is 0.")
     parser.add_argument("--use_checkpoint", type=bool, default=False, help="whether to use checkpoint, default is False.") 
-    parser.add_argument("--checkpoint_path", type=str, default="checkpoint/checkpoint.pth", help="checkpoint path")
+    parser.add_argument("--checkpoint_path", type=str, default="checkpoint/checkpoint.pth", help="checkpoint path.")
+    # learning rate
+    parser.add_argument("--learning_rate", type=float, default=0.001, help="learning rate, default is 0.001.")
     args = parser.parse_args()
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    os.system("python dataproc.py")         # execute this program to get the dataset paths.
     train(device=device, 
           epochs=args.epochs, 
           batch_size=args.batch_size,
           num_workers=args.num_workers,
           use_checkpoint=args.use_checkpoint,
-          checkpoint_path=args.checkpoint_path)
+          checkpoint_path=args.checkpoint_path,
+          learning_rate=args.learning_rate)

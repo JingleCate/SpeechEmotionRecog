@@ -43,8 +43,8 @@ soxr==0.3.7
 sympy==1.12
 threadpoolctl==3.3.0
 torch
-torchaudio==2.2.1+cu118
-torchvision==0.17.1+cu118
+torchaudio
+torchvision
 tqdm==4.66.2
 typing-extensions==4.8.0
 tzdata==2024.1
