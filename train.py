@@ -23,7 +23,7 @@ def train(
         num_workers=0,
         use_checkpoint: bool=False,
         checkpoint_path: str = "checkpoint/checkpoint.pth",
-        learning_rate: float = 0.001,
+        learning_rate: float = 0.0001,
         **kwargs
 ):  
     print("🔢 " + f"Using {device}.")
@@ -93,7 +93,7 @@ def train(
         losses_.append(running_loss/counter)                
         # Validation
         correct_rate = 0
-        if (epoch + ep_temp) % 10 == 9:
+        if (epoch + ep_temp) % 10 == 9 and epoch!= 0:
             total, right = 0, 0
             with torch.no_grad():
                 for idx, sample_batch in enumerate(val_dataloader):
@@ -111,7 +111,7 @@ def train(
             correct_rate = right / total
             print("Accuracy of SSRNetwork on the validation set: %.3f %%" % (100 * correct_rate))
             acc_.append(correct_rate)
-        if (epoch + ep_temp) % 100 == 99:
+        if (epoch + ep_temp) % 100 == 99 and epoch != 0:
             # Save checkpoint each 100 epochs.
             torch.save({
                 "epoch": epoch + 1 + ep_temp,
