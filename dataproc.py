@@ -112,7 +112,7 @@ def output_each_set(loaded_path: str, output_path: str):
         for row in test_csv:
             writer.writerow(row)
 
-
+# TODO modify the duration and offset.
 def extract_feature(set_path: str, output_path: str, catagory: str):
     """Extract features from audio files from a set of train set or validation set or test set.
 
@@ -201,9 +201,9 @@ if __name__ == '__main__':
     split_dataset(ratio=0.8, path="./datasets/archive",
                   output_path="./dataproc.csv")
     output_each_set(loaded_path="./dataproc.csv", output_path="./datasets")
-    extract_feature(set_path="./datasets/train/train.csv",
-                    output_path="./datasets/train/feats.csv", catagory="Train set")
-    extract_feature(set_path="./datasets/val/val.csv",
-                    output_path="./datasets/val/feats.csv", catagory="Valid set")
-    extract_feature(set_path="./datasets/test/test.csv",
-                    output_path="./datasets/test/feats.csv", catagory="Test set")
+    # extract_feature(set_path="./datasets/train/train.csv",
+    #                 output_path="./datasets/train/feats.csv", catagory="Train set")
+    # extract_feature(set_path="./datasets/val/val.csv",
+    #                 output_path="./datasets/val/feats.csv", catagory="Valid set")
+    # extract_feature(set_path="./datasets/test/test.csv",
+    #                 output_path="./datasets/test/feats.csv", catagory="Test set")

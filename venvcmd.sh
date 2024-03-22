@@ -23,3 +23,6 @@ git push -f git@gitee.com:jinglecath/SpeechEmotionRecog.git
 python train.py --help
 
 python train.py --epochs 5000 --batch_size 4 --use_checkpoint True --checkpoint_path  "checkpoints/SSR_epoch_1200.pth"
+
+# delete specified files except for some files
+find ./checkpoints | grep -v '\(f1.txt \| f2.txt\)' | xargs rm
