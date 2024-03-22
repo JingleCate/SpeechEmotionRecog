@@ -46,19 +46,20 @@ def train(
     # optimizer = optim.SGD(net.parameters(), lr=learning_rate, momentum=momentum)
     optimizer = optim.Adam(net.parameters(), lr=learning_rate, eps=1e-8)
     # TODO load checkpoint and why?
+    ep_temp = 0
     if use_checkpoint:
         checkpoint = torch.load(checkpoint_path)
         net.load_state_dict(checkpoint['model_state_dict'])
         net.eval()
         # optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-        epochs = checkpoint['epoch'] - 1
+        ep_temp = checkpoint['epoch'] - 1
         loaded_loss = checkpoint['average_loss']
 
     # 训练10个epoch
     # TODO 验证集和测试集处理
     losses_ = []
     acc_ = []
-    for epoch in range(epochs):
+    for epoch in range(epochs - ep_temp):
         running_loss = 0 # average loss
         counter = 0 # counter
         for idx, sample_batch in enumerate(train_dataloader):
@@ -88,11 +89,11 @@ def train(
         # if idx % 150 == 0 and idx != 0:
         # Compute average loss each epoch
         # print('\n📸 [Epoch]: %d  🕐 [Iteration]: %5d  📉 [Average loss(each epoch)]: %.3f' % (epoch + 1, idx + 1, running_loss/counter))
-        print('📸 [Epoch]: %d   📉 [Average loss(each epoch)]: %.3f' % (epoch + 1, running_loss/counter), end='\n')
+        print('📸 [Epoch]: %d   📉 [Average loss(each epoch)]: %.3f' % (epoch + 1 + ep_temp, running_loss/counter), end='\n')
         losses_.append(running_loss/counter)                
         # Validation
         correct_rate = 0
-        if epoch % 10 == 9:
+        if (epoch + ep_temp) % 10 == 9:
             total, right = 0, 0
             with torch.no_grad():
                 for idx, sample_batch in enumerate(val_dataloader):
@@ -110,14 +111,14 @@ def train(
             correct_rate = right / total
             print("Accuracy of SSRNetwork on the validation set: %.3f %%" % (100 * correct_rate))
             acc_.append(correct_rate)
-        if epoch % 100 == 99:
+        if (epoch + ep_temp) % 100 == 99:
             # Save checkpoint each 100 epochs.
             torch.save({
-                "epoch": epoch + 1,
+                "epoch": epoch + 1 + ep_temp,
                 "model_state_dict": net.state_dict(),
                 "optimizer_state_dict": optimizer.state_dict(),
                 "average_loss": running_loss/counter
-            }, r"checkpoints/SSR_epoch_%d_acc_%.3f.pth" % (epoch + 1, correct_rate))
+            }, r"checkpoints/SSR_epoch_%d_acc_%.3f.pth" % (epoch + 1 + ep_temp, correct_rate))
 
         counter = 0
         running_loss = 0
