@@ -18,7 +18,7 @@ from model.single_sentence_recog import SSRNetwork, LABElS
 ###############################     logging config start       #################################
 log_filename = __file__.split('.')[0] + ".log"
 log_level = logging.INFO
-LOG_FORMAT = "%(asctime)s - [%(levelname)s] - (in %(filename)s -> %(funcName)s(): %(lineno)d) ⏩⏩  %(message)s"
+LOG_FORMAT = "%(asctime)s - [%(levelname)s] - (in %(filename)s: %(lineno)d, %(funcName)s()) \t⏩⏩ %(message)s"
 DATE_FORMAT = "%Y/%m/%d %H:%M:%S"
 
 logger = logging.getLogger(__name__)        # get a logger by the name.
@@ -75,8 +75,8 @@ def train(
     if use_checkpoint:
         checkpoint = torch.load(checkpoint_path)
         net.load_state_dict(checkpoint['model_state_dict'])
-        # net.eval()
-        # optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        net.eval()
+        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
         ep_temp = checkpoint['epoch'] - 1
         loaded_loss = checkpoint['average_loss']
         logger.warning(f">>>>> Loaded model checkpoint from {checkpoint_path} at epoch {ep_temp + 1}.")
@@ -119,7 +119,7 @@ def train(
             # Compute average loss each epoch
                 
             # print('\n📸 [Epoch]: %d  🕐 [Iteration]: %5d  📉 [Average loss(each epoch)]: %.3f' % (epoch + 1, idx + 1, running_loss/counter))
-            logger.info('📸 [Epoch]: %d   📉 [Average loss(each epoch)]: %.3f' % (epoch + 1 + ep_temp, running_loss/counter))
+            logger.info('📸 [Epoch]: %d \t📉 [Average loss]: %.3f' % (epoch + 1 + ep_temp, running_loss/counter))
             # print('📸 [Epoch]: %d   📉 [Average loss(each epoch)]: %.3f' % (epoch + 1 + ep_temp, running_loss/counter), end='\n')
             
             losses_.append(running_loss/counter)

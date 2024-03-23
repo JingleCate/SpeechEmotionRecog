@@ -17,13 +17,14 @@ LABElS = [
 class SSRNetwork(nn.Module):
     def __init__(self, 
             is_print = False,
+            in_channels: int=216
         ):
         super().__init__()
         self.is_print = is_print
         self.net = nn.Sequential(
             nn.BatchNorm1d(216),
             # 卷积层 + Relu激活层
-            nn.Conv1d(in_channels=216, out_channels=256, kernel_size=4, padding="same"),
+            nn.Conv1d(in_channels=in_channels, out_channels=256, kernel_size=4, padding="same"),
             nn.ReLU(),
             nn.Conv1d(in_channels=256, out_channels=128, kernel_size=4, padding="same"),
             nn.ReLU(),

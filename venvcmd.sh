@@ -19,9 +19,19 @@ pip install -r requirement.txt
 # 推送到gitee
 git push -f git@gitee.com:jinglecath/SpeechEmotionRecog.git
 
+# 强制覆盖本地
+git fetch --all
+git reset --hard origin/main
+git pull
+
+
 # 运行
 python train.py --help
 
+# don't use checkpoint
+python train.py --epochs 3000 --batch_size 4 --learning_rate 1e-3 
+
+# use checkpoint
 python train.py --epochs 5000 --batch_size 4 --use_checkpoint True --checkpoint_path  "checkpoints/SSR_epoch_1200.pth"
 
 # delete specified files except for some files
