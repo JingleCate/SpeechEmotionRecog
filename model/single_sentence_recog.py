@@ -24,20 +24,27 @@ class SSRNetwork(nn.Module):
         self.net = nn.Sequential(
             nn.BatchNorm1d(216),
             # 卷积层 + Relu激活层
-            nn.Conv1d(in_channels=in_channels, out_channels=256, kernel_size=4, padding="same"),
+            nn.Conv1d(in_channels=in_channels, out_channels=256, kernel_size=5, padding="same"),
             nn.ReLU(),
-            nn.Conv1d(in_channels=256, out_channels=128, kernel_size=4, padding="same"),
+            nn.Conv1d(in_channels=256, out_channels=128, kernel_size=5, padding="same"),
             nn.ReLU(),
             # Dropout 防止过拟合
             nn.Dropout(p=0.1),
             # # 池化降维
             # nn.MaxPool1d(2),
 
-            nn.BatchNorm1d(128),
             # 卷积层 + Relu激活层
-            nn.Conv1d(in_channels=128, out_channels=32, kernel_size=4, padding="same"),
+            nn.Conv1d(in_channels=128, out_channels=64, kernel_size=5, padding="same"),
             nn.ReLU(),
-            nn.Conv1d(in_channels=32, out_channels=8, kernel_size=4, padding="same"),
+            nn.BatchNorm1d(64),
+            nn.Conv1d(in_channels=64, out_channels=32, kernel_size=5, padding="same"),
+            nn.ReLU(),
+
+            # Dropout 防止过拟合
+            nn.Dropout(p=0.1),
+            nn.Conv1d(in_channels=32, out_channels=16, kernel_size=5, padding="same"),
+            nn.ReLU(),
+            nn.Conv1d(in_channels=16, out_channels=8, kernel_size=5, padding="same"),
             nn.ReLU(),
             # 展平 + 全连接
             nn.Flatten(),

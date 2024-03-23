@@ -5,8 +5,42 @@ import csv
 import numpy as np
 import random
 import torch
+import warnings
 
 from tqdm import tqdm
+from utils.deprecated import deprecated
+
+def extract_single_feature(path: str, is_print: bool = False) -> torch.Tensor:
+    """extract features from a single audio file.
+
+    Parameters
+    ----------
+    `path` : str
+        Audio file path.
+    `is_print` : bool, optional
+        whether to print the shape of the extracted features.
+
+    Returns
+    -------
+    `feat` : torch.Tensor
+       Extracted features.
+    """
+    X, sample_rate = librosa.load(path, sr=44100, offset=0.5, duration=2.5)
+    # this audio's mfcc, 2-dims
+    mfccs = librosa.feature.mfcc(y=X, sr=sample_rate, n_mfcc=13)
+    feat = np.mean(mfccs, axis=0)   # simplify to 1-dim
+    
+    # padding 0 if not 216 because duration 2.5s is just converting to 216 frames.
+    if len(feat) != 216:
+        feat = np.pad(feat, (0, 216 - len(feat)), 'constant', constant_values=0)
+    feat = feat.reshape((216, 1))
+    if is_print:
+            # mfccs.shape is like (13, 216)
+            print("One audio file mfcc size: ", mfccs.shape)
+            # feat.shape is like (216, )
+            print("Simplified feature size: ", feat.shape)
+            is_print = False
+    return feat
 
 
 def split_dataset(ratio: float, path: str, output_path: str):
@@ -40,6 +74,7 @@ def split_dataset(ratio: float, path: str, output_path: str):
                 else:
                     t_v_t.append('03')
                 fpath = os.path.join(root, file)
+                fpath = fpath.replace("\\", "/")
                 file_path.append(fpath)
                 fname, ext = os.path.splitext(file)
                 split_fname = fname.split('-')
@@ -76,9 +111,9 @@ def split_dataset(ratio: float, path: str, output_path: str):
 def output_each_set(loaded_path: str, output_path: str):
     header = ['path', 'channel', 'emotion',
               'e-intensity', 'statement', 'actor', 'split']
-    train_path = os.path.join(output_path, 'train/train.csv')
-    val_path = os.path.join(output_path, 'val/val.csv')
-    test_path = os.path.join(output_path, 'test/test.csv')
+    train_path = os.path.join(output_path, 'train.csv')
+    val_path = os.path.join(output_path, 'val.csv')
+    test_path = os.path.join(output_path, 'test.csv')
     train_csv, val_csv, test_csv = [], [], []
     train_csv.append(header)
     val_csv.append(header)
@@ -91,6 +126,7 @@ def output_each_set(loaded_path: str, output_path: str):
             if row[-1] == 'split':
                 continue
             row.pop(0)  # remove firt line number
+            row[0].replace("\\", "/")
             if row[-1] == '01':
                 train_csv.append(row)
             elif row[-1] == '02':
@@ -113,6 +149,7 @@ def output_each_set(loaded_path: str, output_path: str):
             writer.writerow(row)
 
 # TODO modify the duration and offset.
+@deprecated
 def extract_feature(set_path: str, output_path: str, catagory: str):
     """Extract features from audio files from a set of train set or validation set or test set.
 
@@ -123,6 +160,8 @@ def extract_feature(set_path: str, output_path: str, catagory: str):
     """
     # if not os.path.exists(output_path):
     #     os.makedirs(output_path)
+    warnings.warn("This function has been deprecated, please not use it.", DeprecationWarning)
+
     features = []   # list of features
     with open(set_path, mode="r") as f:
         reader = csv.reader(f, delimiter=',')
@@ -172,38 +211,27 @@ def extract_features_of_batch(paths: list, is_print: bool = False) -> torch.Tens
     """
     features = []
     for path in paths:
-        X, sample_rate = librosa.load(path, sr=44100, offset=0.5, duration=2.5)
-        # this audio's mfcc, 2-dims
-        mfccs = librosa.feature.mfcc(y=X, sr=sample_rate, n_mfcc=13)
-        feat = np.mean(mfccs, axis=0)   # simplify to 1-dim
-        
-        # padding 0 if not 216 because duration 2.5s is just converting to 216 frames.
-        if len(feat) != 216:
-            feat = np.pad(feat, (0, 216 - len(feat)), 'constant', constant_values=0)
-        feat = feat.reshape((216, 1))
+        feat = extract_single_feature(path, is_print=is_print)
         features.append(feat)
-        if is_print:
-            # mfccs.shape is like (13, 216)
-            print("One audio file mfcc size: ", mfccs.shape)
-            # feat.shape is like (216, )
-            print("Simplified feature size: ", feat.shape)
-            is_print = False
+        
     
-    # 转置输出列向量
+    # 输出列向量
     return torch.Tensor(np.array(features))
         
 
 
 
+# if __name__ == '__main__':
+#     split_dataset(ratio=0.8, path="./datasets/archive",
+#                   output_path="./dataproc.csv")
+#     output_each_set(loaded_path="./dataproc.csv", output_path="./datasets")
 
 
-if __name__ == '__main__':
-    split_dataset(ratio=0.8, path="./datasets/archive",
-                  output_path="./dataproc.csv")
-    output_each_set(loaded_path="./dataproc.csv", output_path="./datasets")
-    # extract_feature(set_path="./datasets/train/train.csv",
+
+# ------------------- Codes below are deprecated, please not use it. ------------------- 
+    # extract_feature(set_path="./datasets/train.csv",
     #                 output_path="./datasets/train/feats.csv", catagory="Train set")
-    # extract_feature(set_path="./datasets/val/val.csv",
+    # extract_feature(set_path="./datasets/val.csv",
     #                 output_path="./datasets/val/feats.csv", catagory="Valid set")
-    # extract_feature(set_path="./datasets/test/test.csv",
+    # extract_feature(set_path="./datasets/test.csv",
     #                 output_path="./datasets/test/feats.csv", catagory="Test set")

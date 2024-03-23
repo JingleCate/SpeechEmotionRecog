@@ -3,3 +3,5 @@ myenv/
 tests/
 __pycache__/
 */__pycache__/
+train.log
+records/*.csv
