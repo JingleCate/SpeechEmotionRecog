@@ -1,6 +1,0 @@
-2024/03/23 19:19:09 - [CRITICAL] - (in train.py: 87, train()) 	⏩⏩ >>>>> Loaded model checkpoint from checkpoints/SSR_epoch_3400_acc_0.576_2nd.pth at epoch 3400.
-2024/03/23 19:19:09 - [CRITICAL] - (in train.py: 88, train()) 	⏩⏩ >>>>> Resume training from epoch 3400.
-2024/03/23 19:19:25 - [INFO] - (in train.py: 132, train()) 	⏩⏩ 📸 [Epoch]: 3400 	📉 [Average loss]: 1.838
-2024/03/23 19:19:27 - [INFO] - (in train.py: 158, train()) 	⏩⏩ Accuracy(SSRNet) on the valid set: 57.639 %
-2024/03/23 19:19:27 - [CRITICAL] - (in train.py: 159, train()) 	⏩⏩ >>>>> Current learning rate: [0.001].
-2024/03/23 19:19:37 - [INFO] - (in train.py: 132, train()) 	⏩⏩ 📸 [Epoch]: 3401 	📉 [Average loss]: 1.863
