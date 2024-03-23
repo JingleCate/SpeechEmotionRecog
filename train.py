@@ -48,7 +48,7 @@ def train(
         num_workers=0,
         resume: bool=False,
         checkpoint_path: str = "checkpoint/checkpoint.pth",
-        learning_rate: float = 0.0001,
+        learning_rate: float = 1e-4,
         **kwargs
 ):  
     print("🔢 " + f"Using {device}.")
@@ -70,6 +70,9 @@ def train(
     # 优化optimizer
     # optimizer = optim.SGD(net.parameters(), lr=learning_rate, momentum=momentum)
     optimizer = optim.Adam(net.parameters(), lr=learning_rate, eps=1e-8, amsgrad=True)
+    # lr scheduler
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.9, patience=10, verbose=True, min_lr=1e-8)
+    
     # load checkpoint and why?
     ep_temp = 0
     if resume:
@@ -81,7 +84,9 @@ def train(
         loaded_loss = checkpoint['average_loss']
         logger.critical(f">>>>> Loaded model checkpoint from {checkpoint_path} at epoch {ep_temp + 1}.")
         logger.critical(f">>>>> Resume training from epoch { ep_temp + 1 }.")
-    logger.critical(f">>>>> Curreent learning rate: { optimizer.state_dict()['param_groups'][0]['lr'] }")
+    # print(learning_rate)
+    # logger.critical(f">>>>> Curreent learning rate: { optimizer.state_dict()['param_groups'][0]['lr'] }")
+    # logger.critical(f">>>>> Current learning rate: { scheduler.get_last_lr() }.")
 
     # 训练10个epoch
     # TODO 验证集和测试集处理
@@ -93,6 +98,7 @@ def train(
             running_loss = 0 # average loss
             counter = 0 # counter
             
+            # each epoch training
             for idx, sample_batch in enumerate(train_dataloader):
                 # path, label is a batch list.
                 # labels: tensor([2, 4, 6, 2]), values: 0~7 mapping for 8 locations
@@ -125,11 +131,12 @@ def train(
             # print('📸 [Epoch]: %d   📉 [Average loss(each epoch)]: %.3f' % (epoch + 1 + ep_temp, running_loss/counter), end='\n')
 
             losses_.append(running_loss/counter)
-            loss_epoch.append(epoch + 1 + ep_temp)                
+            loss_epoch.append(epoch + 1 + ep_temp) 
+            scheduler.step(running_loss/counter)               
 
             # Validation
             correct_rate = 0
-            if (epoch + ep_temp) % 10 == 9:
+            if (epoch + ep_temp) % 50 == 49:
                 total, right = 0, 0
                 net.eval()      # shut down the network batchnorm layer and dropout layer.
                 with torch.no_grad():
@@ -147,6 +154,7 @@ def train(
                         right += (predict == labels).sum().item()
                 correct_rate = right / total
                 logger.info("Accuracy(SSRNet) on the valid set: %.3f %%" % (100 * correct_rate))
+                logger.critical(f">>>>> Current learning rate: { scheduler.get_last_lr() }.")
                 # Adam optimizer lr is changing while trainin(by gradient or gradient^2, but lr value is not changed), so such operations are not needed. 
                 # logger.critical(f">>>>> Curreent learning rate: { optimizer.state_dict()['param_groups'][0]['lr'] }")
                 # print("Accuracy of SSRNetwork on the validation set: %.3f %%" % (100 * correct_rate))
@@ -186,7 +194,7 @@ if __name__ == "__main__":
     parser.add_argument("-r", "--resume", type=bool, default=False, help="whether to resume training and use checkpoint, default is False.") 
     parser.add_argument("-chp","--checkpoint_path", type=str, default="checkpoint/checkpoint.pth", help="checkpoint path.")
     # learning rate
-    parser.add_argument("-lr", "--learning_rate", type=float, default=1e-3, help="learning rate, default is 0.001.")
+    parser.add_argument("-lr", "--learning_rate", type=float, default=1e-4, help="learning rate, default is 0.0001.")
     args = parser.parse_args()
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
