@@ -46,7 +46,7 @@ def train(
         batch_size=1,
         shuffle=True,
         num_workers=0,
-        use_checkpoint: bool=False,
+        resume: bool=False,
         checkpoint_path: str = "checkpoint/checkpoint.pth",
         learning_rate: float = 0.0001,
         **kwargs
@@ -67,19 +67,21 @@ def train(
     net.to(device)
     # 定义损失策略和优化器
     criterion = nn.CrossEntropyLoss()
-    # TODO 优化optimizer
+    # 优化optimizer
     # optimizer = optim.SGD(net.parameters(), lr=learning_rate, momentum=momentum)
-    optimizer = optim.Adam(net.parameters(), lr=learning_rate, eps=1e-8)
-    # TODO load checkpoint and why?
+    optimizer = optim.Adam(net.parameters(), lr=learning_rate, eps=1e-8, amsgrad=True)
+    # load checkpoint and why?
     ep_temp = 0
-    if use_checkpoint:
+    if resume:
         checkpoint = torch.load(checkpoint_path)
         net.load_state_dict(checkpoint['model_state_dict'])
         net.eval()
         optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
         ep_temp = checkpoint['epoch'] - 1
         loaded_loss = checkpoint['average_loss']
-        logger.warning(f">>>>> Loaded model checkpoint from {checkpoint_path} at epoch {ep_temp + 1}.")
+        logger.critical(f">>>>> Loaded model checkpoint from {checkpoint_path} at epoch {ep_temp + 1}.")
+        logger.critical(f">>>>> Resume training from epoch { ep_temp + 1 }.")
+    logger.critical(f">>>>> Curreent learning rate: { optimizer.state_dict()['param_groups'][0]['lr'] }")
 
     # 训练10个epoch
     # TODO 验证集和测试集处理
@@ -121,13 +123,13 @@ def train(
             # print('\n📸 [Epoch]: %d  🕐 [Iteration]: %5d  📉 [Average loss(each epoch)]: %.3f' % (epoch + 1, idx + 1, running_loss/counter))
             logger.info('📸 [Epoch]: %d \t📉 [Average loss]: %.3f' % (epoch + 1 + ep_temp, running_loss/counter))
             # print('📸 [Epoch]: %d   📉 [Average loss(each epoch)]: %.3f' % (epoch + 1 + ep_temp, running_loss/counter), end='\n')
-            
+
             losses_.append(running_loss/counter)
             loss_epoch.append(epoch + 1 + ep_temp)                
 
             # Validation
             correct_rate = 0
-            if (epoch + ep_temp) % 50 == 49:
+            if (epoch + ep_temp) % 10 == 9:
                 total, right = 0, 0
                 net.eval()      # shut down the network batchnorm layer and dropout layer.
                 with torch.no_grad():
@@ -145,6 +147,8 @@ def train(
                         right += (predict == labels).sum().item()
                 correct_rate = right / total
                 logger.info("Accuracy(SSRNet) on the valid set: %.3f %%" % (100 * correct_rate))
+                # Adam optimizer lr is changing while trainin(by gradient or gradient^2, but lr value is not changed), so such operations are not needed. 
+                # logger.critical(f">>>>> Curreent learning rate: { optimizer.state_dict()['param_groups'][0]['lr'] }")
                 # print("Accuracy of SSRNetwork on the validation set: %.3f %%" % (100 * correct_rate))
                 
                 acc_.append(correct_rate)
@@ -170,14 +174,19 @@ def train(
         df2.to_csv("./records/acc.csv", mode='a')
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser("Training model...")
-    parser.add_argument("--epochs", type=int, default=100, help="number of epochs, default is 100.")
-    parser.add_argument("--batch_size", type=int, default=1, help="batch size, default is 1.")
-    parser.add_argument("--num_workers", type=int, default=0, help="number of workers for data loading, default is 0.")
-    parser.add_argument("--use_checkpoint", type=bool, default=False, help="whether to use checkpoint, default is False.") 
-    parser.add_argument("--checkpoint_path", type=str, default="checkpoint/checkpoint.pth", help="checkpoint path.")
+    parser = argparse.ArgumentParser(prog="train",
+                                     description=">>> Train the model.",
+                                     epilog=">>> For more information, please refer to the README.md file.")
+    # parser.add_argument("plt", type=int, default=0, help="Test the positional parameters, default is 0.")
+    # parser.add_argument("clt", type=int, default=0, help="Test the positional parameters, default is 0.")
+    # All parameters are optional, if we need positional parameters, use "parser.add_argument('filename') "
+    parser.add_argument("-e", "--epochs", type=int, default=1000, help="number of epochs, default is 100.")
+    parser.add_argument("-b", "--batch_size", type=int, default=1, help="batch size, default is 1.")
+    parser.add_argument("-n", "--num_workers", type=int, default=0, help="number of workers for data loading, default is 0.")
+    parser.add_argument("-r", "--resume", type=bool, default=False, help="whether to resume training and use checkpoint, default is False.") 
+    parser.add_argument("-chp","--checkpoint_path", type=str, default="checkpoint/checkpoint.pth", help="checkpoint path.")
     # learning rate
-    parser.add_argument("--learning_rate", type=float, default=1e-4, help="learning rate, default is 0.001.")
+    parser.add_argument("-lr", "--learning_rate", type=float, default=1e-3, help="learning rate, default is 0.001.")
     args = parser.parse_args()
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -186,6 +195,6 @@ if __name__ == "__main__":
           epochs=args.epochs, 
           batch_size=args.batch_size,
           num_workers=args.num_workers,
-          use_checkpoint=args.use_checkpoint,
+          resume=args.resume,
           checkpoint_path=args.checkpoint_path,
           learning_rate=args.learning_rate)

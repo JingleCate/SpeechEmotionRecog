@@ -29,10 +29,10 @@ git pull
 python train.py --help
 
 # don't use checkpoint
-python train.py --epochs 3000 --batch_size 4 --learning_rate 1e-3 
+python train.py -e 3000 -b 4 -lr 1 
 
 # use checkpoint
-python train.py --epochs 5000 --batch_size 4 --use_checkpoint True --checkpoint_path  "checkpoints/SSR_epoch_1200.pth"
+python train.py -e 5000 -b 4 -r True -lr 1e-4 -chp  checkpoints/SSR_epoch_3400_acc_0.576_2nd.pth
 
 # delete specified files except for some files
 find ./checkpoints | grep -v '\(f1.txt \| f2.txt\)' | xargs rm
