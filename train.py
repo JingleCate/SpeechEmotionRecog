@@ -18,7 +18,7 @@ from model.single_sentence_recog import SSRNetwork, LABElS
 ###############################     logging config start       #################################
 log_filename = __file__.split('.')[0] + ".log"
 log_level = logging.INFO
-LOG_FORMAT = "%(asctime)s - [%(levelname)s] - (in %(filename)s: %(lineno)d, %(funcName)s()) \t⏩⏩ %(message)s"
+LOG_FORMAT = "%(asctime)s - [%(levelname)s] - (in %(filename)s:%(lineno)d, %(funcName)s()) \t⏩⏩ %(message)s"
 DATE_FORMAT = "%Y/%m/%d %H:%M:%S"
 
 logger = logging.getLogger(__name__)        # get a logger by the name.
@@ -80,6 +80,8 @@ def train(
         net.load_state_dict(checkpoint['model_state_dict'])
         net.eval()
         optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        if 'scheduler_state_dict' in checkpoint.keys():
+            scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
         ep_temp = checkpoint['epoch'] - 1
         loaded_loss = checkpoint['average_loss']
         logger.critical(f">>>>> Loaded model checkpoint from {checkpoint_path} at epoch {ep_temp + 1}.")
@@ -168,6 +170,7 @@ def train(
                     "epoch": epoch + 1 + ep_temp,
                     "model_state_dict": net.state_dict(),
                     "optimizer_state_dict": optimizer.state_dict(),
+                    "scheduler_state_dict": scheduler.state_dict(),
                     "average_loss": running_loss/counter
                 }, r"checkpoints/SSR_epoch_%d_acc_%.3f.pth" % (epoch + 1 + ep_temp, correct_rate))
 
