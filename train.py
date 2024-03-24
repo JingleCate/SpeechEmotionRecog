@@ -49,6 +49,7 @@ def train(
         resume: bool=False,
         checkpoint_path: str = "checkpoint/checkpoint.pth",
         learning_rate: float = 1e-3,
+        patience: int = 100,
         **kwargs
 ):  
     print("🔢 " + f"Using {device}.")
@@ -71,7 +72,7 @@ def train(
     # optimizer = optim.SGD(net.parameters(), lr=learning_rate, momentum=momentum)
     optimizer = optim.Adam(net.parameters(), lr=learning_rate, eps=1e-8, amsgrad=True)
     # lr scheduler
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.99, patience=60, min_lr=1e-8)
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.95, patience=patience, min_lr=1e-8)
     
     # load checkpoint and why?
     ep_temp = 0
@@ -151,9 +152,12 @@ def train(
 
                         # (N,C,L), where N is the batch size, C is the number of features or channels, and L is the sequence length
                         outputs = net(feats)
+                        # print(outputs.data, labels.data)
                         values, predict = torch.max(outputs.data, dim=1)
+                        # print(values.data, predict.data)
                         total += labels.size(0)
                         right += (predict == labels).sum().item()
+                        # print(total, right)
                 correct_rate = right / total
                 logger.info("Accuracy(SSRNet) on the valid set: %.3f %%" % (100 * correct_rate))
                 logger.critical(f">>>>> Current learning rate(by scheduler): { scheduler.get_last_lr() }.")
@@ -198,6 +202,7 @@ if __name__ == "__main__":
     parser.add_argument("-chp","--checkpoint_path", type=str, default="checkpoint/checkpoint.pth", help="checkpoint path.")
     # learning rate
     parser.add_argument("-lr", "--learning_rate", type=float, default=1e-3, help="learning rate, default is 0.001.")
+    parser.add_argument("-p", "--patience", type=int, default=100, help="The max amount of epoch about tolerating the average loss not descending, default is 100.")
     args = parser.parse_args()
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -208,4 +213,5 @@ if __name__ == "__main__":
           num_workers=args.num_workers,
           resume=args.resume,
           checkpoint_path=args.checkpoint_path,
-          learning_rate=args.learning_rate)
+          learning_rate=args.learning_rate,
+          patience=args.patience)

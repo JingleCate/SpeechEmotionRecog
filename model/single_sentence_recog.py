@@ -56,9 +56,9 @@ class SSRNetwork(nn.Module):
         for m in self.net:
             if isinstance(m, nn.Conv1d):
                 nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
-            elif isinstance(m, nn.BatchNorm1d):
-                nn.init.constant_(m.weight, 1)
-                nn.init.constant_(m.bias, 0)
+            # elif isinstance(m, nn.BatchNorm1d):
+            #     nn.init.constant_(m.weight, 1)
+            #     nn.init.constant_(m.bias, 0)
 
     def forward(self, x):
         # x = self.net(x) 这样写无法查看和调试中间参数形状
