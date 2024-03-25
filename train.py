@@ -5,20 +5,23 @@ import logging
 import torch.nn as nn
 import torch.optim as optim
 import pandas as pd
+import numpy as np
 
 
 from torch.utils.data import DataLoader
 from tqdm import tqdm
+from sklearn.metrics import classification_report
 
 from dataset import SpeechDataset
 from dataproc import extract_features_of_batch
 from logtool.logtool import log
-from model.single_sentence_recog import SSRNetwork, LABElS
+from model.single_sentence_recog import SSRNetwork, LABELS
 
 ###############################     logging config start       #################################
 log_filename = __file__.split('.')[0] + ".log"
 log_level = logging.INFO
-LOG_FORMAT = "%(asctime)s - [%(levelname)s] - (in %(filename)s:%(lineno)d, %(funcName)s()) \t⏩⏩ %(message)s"
+# LOG_FORMAT = "%(asctime)s - [%(levelname)s] - (in %(filename)s:%(lineno)d, %(funcName)s()) \t⏩⏩ %(message)s"
+LOG_FORMAT = "%(asctime)s - [%(levelname)s] - ⏩⏩ %(message)s"
 DATE_FORMAT = "%Y/%m/%d %H:%M:%S"
 
 logger = logging.getLogger(__name__)        # get a logger by the name.
@@ -41,15 +44,15 @@ logger.addHandler(chandler)
 
 @log("info", "Train the model.")
 def train(
-        epochs: int = 100,
+        epochs: int = 1000,
         device: str = "cpu",
-        batch_size=1,
+        batch_size=16,
         shuffle=True,
         num_workers=0,
         resume: bool=False,
         checkpoint_path: str = "checkpoint/checkpoint.pth",
         learning_rate: float = 1e-3,
-        patience: int = 100,
+        patience: int = 10,
         **kwargs
 ):  
     print("🔢 " + f"Using {device}.")
@@ -79,7 +82,7 @@ def train(
     if resume:
         checkpoint = torch.load(checkpoint_path)
         net.load_state_dict(checkpoint['model_state_dict'])
-        net.eval()
+        # net.eval()
         optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
         if 'scheduler_state_dict' in checkpoint.keys():
             scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
@@ -93,8 +96,9 @@ def train(
 
     # 训练10个epoch
     # TODO 验证集和测试集处理
-    losses_, loss_epoch = [], []
-    acc_, acc_epoch = [], []
+    rec_epoch, losses_, acc_, prec_, recall_, f1_, lr_= [], [], [], [], [], [], []
+    to_save = {}        # save the max checkpoint until now.
+    max_acc_ep = 0
     try:
         net.train()
         for epoch in range(epochs - ep_temp):
@@ -130,17 +134,17 @@ def train(
             # Compute average loss each epoch
                 
             # print('\n📸 [Epoch]: %d  🕐 [Iteration]: %5d  📉 [Average loss(each epoch)]: %.3f' % (epoch + 1, idx + 1, running_loss/counter))
-            logger.info('📸 [Epoch]: %d \t📉 [Average loss]: %.3f' % (epoch + 1 + ep_temp, running_loss/counter))
+            # logger.info('📸 [Epoch]: %d \t📉 [Average loss]: %.3f' % (epoch + 1 + ep_temp, running_loss/counter))
             # print('📸 [Epoch]: %d   📉 [Average loss(each epoch)]: %.3f' % (epoch + 1 + ep_temp, running_loss/counter), end='\n')
 
             losses_.append(running_loss/counter)
-            loss_epoch.append(epoch + 1 + ep_temp) 
+            rec_epoch.append(epoch + 1 + ep_temp) 
             scheduler.step(running_loss/counter)               
 
             # Validation
             correct_rate = 0
-            if (epoch + ep_temp) % 50 == 49:
-                total, right = 0, 0
+            if True:
+                val_total_labels, val_total_pred = torch.tensor([]).to(device), torch.tensor([]).to(device)
                 net.eval()      # shut down the network batchnorm layer and dropout layer.
                 with torch.no_grad():
                     for idx, sample_batch in enumerate(val_dataloader):
@@ -155,38 +159,90 @@ def train(
                         # print(outputs.data, labels.data)
                         values, predict = torch.max(outputs.data, dim=1)
                         # print(values.data, predict.data)
-                        total += labels.size(0)
-                        right += (predict == labels).sum().item()
+
+                        val_total_labels = torch.hstack((val_total_labels, labels.data))
+                        val_total_pred = torch.hstack((val_total_pred, predict.data))
+
+                        # total += labels.size(0)
+                        # right += (predict == labels).sum().item()
                         # print(total, right)
-                correct_rate = right / total
-                logger.info("Accuracy(SSRNet) on the valid set: %.3f %%" % (100 * correct_rate))
-                logger.critical(f">>>>> Current learning rate(by scheduler): { scheduler.get_last_lr() }.")
+
+                #               precision    recall  f1-score   support
+
+                #            0       0.24      0.62      0.35        13
+                #            1       0.24      0.25      0.24        16
+                #            2       0.13      0.29      0.18        17
+                #            3       0.50      0.05      0.09        21
+                #            4       0.33      0.06      0.11        16
+                #            5       0.27      0.14      0.18        22
+                #            6       0.28      0.41      0.33        17
+                #            7       0.36      0.23      0.28        22
+
+                #     accuracy                           0.24       144
+                #    macro avg       0.29      0.26      0.22       144
+                # weighted avg       0.30      0.24      0.21       144
+                report_dict = classification_report(val_total_labels.cpu().numpy().astype(int), 
+                                                    val_total_pred.cpu().numpy().astype(int), 
+                                                    labels=range(len(LABELS)), 
+                                                    output_dict=True,
+                                                    zero_division=np.nan)
+                # Just select the macro method for dataset is well-distribute.
+                correct_rate, macro_prec, macro_recall, macro_f1 = (report_dict["accuracy"],
+                                                                    report_dict["macro avg"]["precision"],
+                                                                    report_dict["macro avg"]["recall"], 
+                                                                    report_dict["macro avg"]["f1-score"])
+
+                logger.info("Epoch: %d\tls: %.3f | lr: %.3e | acc: %.3f | prec: %.3f | rc: %.3f | f1: %.3f" % 
+                            (rec_epoch[-1], losses_[-1], scheduler.get_last_lr()[0], correct_rate, macro_prec, macro_recall, macro_f1))
+                # logger.critical(f">>>>> Current learning rate(by scheduler): { scheduler.get_last_lr() }.")
                 # Adam optimizer lr is changing while trainin(by gradient or gradient^2, but lr value is not changed), so such operations are not needed. 
                 # logger.critical(f">>>>> Curreent learning rate: { optimizer.state_dict()['param_groups'][0]['lr'] }")
                 # print("Accuracy of SSRNetwork on the validation set: %.3f %%" % (100 * correct_rate))
                 
                 acc_.append(correct_rate)
-                acc_epoch.append(epoch + 1 + ep_temp)
+                prec_.append(macro_prec)
+                recall_.append(macro_recall)
+                f1_.append(macro_f1)
+                lr_.append(scheduler.get_last_lr()[0])
                 net.train()         # enable the network batchnorm layer and dropout layer.
-            if (epoch + ep_temp) % 100 == 99 and epoch != 0:
-                # Save checkpoint each 100 epochs.
-                torch.save({
+            
+            # beginning of training loop or accuracy increasing.
+            if len(acc_) == 1:
+                to_save = {
                     "epoch": epoch + 1 + ep_temp,
                     "model_state_dict": net.state_dict(),
                     "optimizer_state_dict": optimizer.state_dict(),
                     "scheduler_state_dict": scheduler.state_dict(),
-                    "average_loss": running_loss/counter
-                }, r"checkpoints/SSR_epoch_%d_acc_%.3f.pth" % (epoch + 1 + ep_temp, correct_rate))
-
+                    "average_loss": running_loss/counter,
+                    "acc": correct_rate
+                }
+            if acc_[-1] > acc_[max_acc_ep]:
+                max_acc_ep = len(acc_) - 1
+                to_save = {
+                    "epoch": epoch + 1 + ep_temp,
+                    "model_state_dict": net.state_dict(),
+                    "optimizer_state_dict": optimizer.state_dict(),
+                    "scheduler_state_dict": scheduler.state_dict(),
+                    "average_loss": running_loss/counter,
+                    "acc": correct_rate
+                }
             counter = 0
             running_loss = 0
     finally:
-        df1 = pd.DataFrame({"epoch": loss_epoch, 
-                            "losses": losses_})
-        df2 = pd.DataFrame({"epoch": acc_epoch,
-                            "acc": acc_})
-        df1.to_csv("./records/losses.csv", mode='a')
-        df2.to_csv("./records/acc.csv", mode='a')
+        # save checkpoint
+        torch.save(to_save, r"checkpoints/SSR_epoch_%d_acc_%.3f.pth" % (to_save["epoch"], to_save["acc"]))
+        df1 = pd.DataFrame({"epoch": rec_epoch,
+                            "lr": lr_,
+                            "losses": losses_,
+                            "acc":acc_,
+                            "prec":prec_,
+                            "recall":recall_,
+                            "f1":f1_})
+        if not os.path.exists("./records"):
+            os.makedirs("./records")
+        # whether to insert columns headers or not.
+        header = False if os.path.exists("./records/train_eval.csv") else True
+        df1.to_csv("./records/train_eval.csv", mode='a', encoding="utf-8", header=header, index=False)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(prog="train",
@@ -196,13 +252,13 @@ if __name__ == "__main__":
     # parser.add_argument("clt", type=int, default=0, help="Test the positional parameters, default is 0.")
     # All parameters are optional, if we need positional parameters, use "parser.add_argument('filename') "
     parser.add_argument("-e", "--epochs", type=int, default=1000, help="number of epochs, default is 100.")
-    parser.add_argument("-b", "--batch_size", type=int, default=1, help="batch size, default is 1.")
+    parser.add_argument("-b", "--batch_size", type=int, default=16, help="batch size, default is 16.")
     parser.add_argument("-n", "--num_workers", type=int, default=0, help="number of workers for data loading, default is 0.")
     parser.add_argument("-r", "--resume", type=bool, default=False, help="whether to resume training and use checkpoint, default is False.") 
     parser.add_argument("-chp","--checkpoint_path", type=str, default="checkpoint/checkpoint.pth", help="checkpoint path.")
     # learning rate
     parser.add_argument("-lr", "--learning_rate", type=float, default=1e-3, help="learning rate, default is 0.001.")
-    parser.add_argument("-p", "--patience", type=int, default=100, help="The max amount of epoch about tolerating the average loss not descending, default is 100.")
+    parser.add_argument("-p", "--patience", type=int, default=10, help="The max amount of epoch about tolerating the average loss not descending, default is 100.")
     args = parser.parse_args()
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

@@ -8,9 +8,12 @@ env/Scripts/activate.bat
 # In Powershel
 env/Scripts/Activate.ps1
 
+
 # Export dependences
 pip freeze > requirements.txt
 pip install -r requirement.txt
+pip list 
+pip show ***
 
 #    git tips
 # commit standard
@@ -29,7 +32,7 @@ git pull
 python train.py --help
 
 # don't use checkpoint
-python train.py -e 3000 -b 16 -lr 1e-4 -p 10
+python train.py -e 3000 -b 16 -lr 1e-4 -p 5
 
 # use checkpoint
 python train.py -e 5000 -b 16 -r True -chp  checkpoints/SSR_epoch_3400_acc_0.576_2nd.pth

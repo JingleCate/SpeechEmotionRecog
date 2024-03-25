@@ -2,8 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as feats
 
-LABElS = [
-    "Null"
+LABELS = [
      "neutral",
      "calm",  
      "happy", 

@@ -1,2 +1,3 @@
 # TODO: Add f1 and f2 scores,....
-torcheval.metrics.functional.multiclass_f1_score()
+# torcheval.metrics.functional.multiclass_f1_score()
+# pr curve 和 roc曲线
