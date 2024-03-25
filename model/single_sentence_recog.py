@@ -40,10 +40,10 @@ class SSRNetwork(nn.Module):
             # nn.Conv1d(in_channels=64, out_channels=32, kernel_size=5, padding="same"),
             # nn.ReLU(),
 
-            # Dropout 防止过拟合
-            nn.Conv1d(in_channels=32, out_channels=16, kernel_size=3, padding="same"),
+            nn.BatchNorm1d(128),
+            nn.Conv1d(in_channels=128, out_channels=32, kernel_size=3, padding="same"),
             nn.ReLU(),
-            nn.Conv1d(in_channels=16, out_channels=8, kernel_size=3, padding="same"),
+            nn.Conv1d(in_channels=32, out_channels=8, kernel_size=3, padding="same"),
             nn.ReLU(),
             # 展平 + 全连接
             nn.Flatten(),
