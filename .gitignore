@@ -5,3 +5,4 @@ __pycache__/
 */__pycache__/
 train.log
 records/*.csv
+.ipynb_checkpoints/

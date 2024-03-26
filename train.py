@@ -118,7 +118,7 @@ def train(
             counter = 0 # counter
             
             # each epoch training
-            for idx, sample_batch in enumerate(train_dataloader):
+            for idx, sample_batch in enumerate(tqdm(train_dataloader)):
                 # path, label is a batch list.
                 # labels: tensor([2, 4, 6, 2]), values: 0~7 mapping for 8 locations
                 paths, labels = sample_batch["path"], (sample_batch["label"] - 1).to(device)
@@ -205,7 +205,7 @@ def train(
                                                                     report_dict["macro avg"]["recall"], 
                                                                     report_dict["macro avg"]["f1-score"])
 
-                logger.info("Epoch: %d\tls: %.3f | lr: %.3e | acc: %.3f | prec: %.3f | rc: %.3f | f1: %.3f" % 
+                logger.info("Epoch: %d\tls: %.3f | lr: %.3e | acc: %.3f | prec: %.3f | rc: %.3f | f1: %.3f\n" % 
                             (rec_epoch[-1], losses_[-1], scheduler.get_last_lr()[0], correct_rate, macro_prec, macro_recall, macro_f1))
                 # logger.critical(f">>>>> Current learning rate(by scheduler): { scheduler.get_last_lr() }.")
                 # Adam optimizer lr is changing while trainin(by gradient or gradient^2, but lr value is not changed), so such operations are not needed. 
