@@ -30,12 +30,10 @@ git pull
 
 # 运行 加 & 后台运行
 python train.py --help
-
 # don't use checkpoint
 python train.py -e 1000 -b 16 -lr 1e-4 -p 10
-
 # use checkpoint
 python train.py -e 5000 -b 16 -r True -chp  checkpoints/SSR_epoch_3400_acc_0.576_2nd.pth
 
-# delete specified files except for some files
+# delete specified files except for some files in linux.
 find ./checkpoints | grep -v '\(f1.txt \| f2.txt\)' | xargs rm

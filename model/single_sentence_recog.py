@@ -78,7 +78,7 @@ class SSRNetwork(nn.Module):
             nn.Linear(self.out_len2, self.classes),
             nn.Softmax(dim=1)
         )
-        self.init_weight()
+        # self.init_weight()
 
 
     def init_weight(self):
