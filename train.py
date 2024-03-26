@@ -2,6 +2,7 @@ import os
 import torch
 import argparse
 import logging
+import yaml
 import torch.nn as nn
 import torch.optim as optim
 import pandas as pd
@@ -66,8 +67,19 @@ def train(
     test_dataset = SpeechDataset(r"datasets/test.csv")
     test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
 
+    # 载入配置
+    config = None
+    with open("config.yaml", 'r') as f:
+        config = yaml.load(f, Loader=yaml.FullLoader)
+
     # 定义模型
-    net = SSRNetwork(is_print=False)
+    net = SSRNetwork(is_print=False,
+                     in_channels=config["single_speech_recog_net"]["in_channels"],
+                     hidden_layer=config["single_speech_recog_net"]["hidden_layer"],
+                     padding=config["single_speech_recog_net"]["padding"],
+                     maxpool_config=config["single_speech_recog_net"]["maxpool"],
+                     classes=config["single_speech_recog_net"]["classes"],
+                     )
     net.to(device)
     # 定义损失策略和优化器
     criterion = nn.CrossEntropyLoss()
@@ -112,7 +124,7 @@ def train(
                 paths, labels = sample_batch["path"], (sample_batch["label"] - 1).to(device)
                 # extract features, Simplified feature size:  (bacth_size, 216) 
                 feats = extract_features_of_batch(paths, is_print=False).to(device) # to same device
-                # print(feats, feats.shape)
+                # print(feats, feats.shape) torch.Size([batch_size, 39, 300])
                 # return
 
                 # Optimizing
@@ -122,6 +134,7 @@ def train(
                 # print(outputs, labels)
                 # compute CRLoss
                 loss = criterion(outputs, labels)
+                # return
 
                 # compute gradient, backpropagation
                 loss.backward()

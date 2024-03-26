@@ -25,20 +25,23 @@ def extract_single_feature(path: str, is_print: bool = False) -> torch.Tensor:
     `feat` : torch.Tensor
        Extracted features.
     """
-    X, sample_rate = librosa.load(path, sr=44100, offset=0.5, duration=2.5)
+    # Just select 3s.
+    X, sample_rate = librosa.load(path, sr=44100, offset=0, duration=3.0)
     # this audio's mfcc, 2-dims
-    mfccs = librosa.feature.mfcc(y=X, sr=sample_rate, n_mfcc=13)
-    feat = np.mean(mfccs, axis=0)   # simplify to 1-dim
+    mfccs = librosa.feature.mfcc(y=X, sr=sample_rate, n_mfcc=39)
+    feat = mfccs
+    # print(feat.shape)
+    # feat = np.mean(mfccs, axis=0)   # simplify to 1-dim
     
     # padding 0 if not 216 because duration 2.5s is just converting to 216 frames.
-    if len(feat) != 216:
-        feat = np.pad(feat, (0, 216 - len(feat)), 'constant', constant_values=0)
-    feat = feat.reshape((216, 1))
+    if feat.shape[1] != 300:
+        # (39, ) -> (39, 300)
+        feat = np.pad(feat, ((0, 0), (0, 300 - feat.shape[1])), 'constant', constant_values=0)
+    # print(feat.shape)
     if is_print:
-            # mfccs.shape is like (13, 216)
+            # mfccs.shape is like (39, 300)
             print("One audio file mfcc size: ", mfccs.shape)
-            # feat.shape is like (216, )
-            print("Simplified feature size: ", feat.shape)
+            print("One audio file feat size: ", feat.shape)
             is_print = False
     return feat
 
@@ -211,20 +214,26 @@ def extract_features_of_batch(paths: list, is_print: bool = False) -> torch.Tens
     """
     features = []
     for path in paths:
+        # return (39, 300)
         feat = extract_single_feature(path, is_print=is_print)
         features.append(feat)
         
     
     # 输出列向量
-    return torch.Tensor(np.array(features))
+    ret =  torch.Tensor(np.array(features))
+    # print(ret)
+    return ret
         
 
 
 
 # if __name__ == '__main__':
-#     split_dataset(ratio=0.8, path="./datasets/archive",
-#                   output_path="./dataproc.csv")
-#     output_each_set(loaded_path="./dataproc.csv", output_path="./datasets")
+    # split_dataset(ratio=0.8, path="./datasets/archive",
+    #               output_path="./dataproc.csv")
+    # output_each_set(loaded_path="./dataproc.csv", output_path="./datasets")
+
+
+    # extract_single_feature("./datasets/archive/Actor_01/03-01-01-01-01-01-01.wav")
 
 
 
