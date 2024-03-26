@@ -1,7 +1,7 @@
 import os
 import sys
 
-from logtool.logtool import log
+from utils.logtool import log
 
 @log("info")
 def test(s: str):

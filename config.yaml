@@ -1,9 +1,13 @@
-# train:
-#   epoch: 1000
-#   batch_size: 16
-#   lr: 1e-3
-#   patience: 10
-#   factor: 0.95
+train:
+  epochs: 1000
+  batch_size: 16
+  learning_rate: 1e-3
+  num_workers: 0
+  resume: False
+  checkpoint_path: checkpoints/SSR_epoch_x_acc_x.pth
+  lr: 1e-3
+  patience: 3
+  factor: 0.95
 
 # -----------------------------------------------------------------------------------------------------
 # BatchNorm1d(39, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True) torch.Size([16, 39, 300])
