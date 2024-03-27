@@ -9,7 +9,9 @@ import warnings
 
 from tqdm import tqdm
 from utils.deprecated import deprecated
+from transformers import Wav2Vec2Processor, Wav2Vec2Model
 
+@deprecated
 def extract_single_feature(path: str, is_print: bool = False) -> torch.Tensor:
     """extract features from a single audio file.
 
@@ -45,7 +47,7 @@ def extract_single_feature(path: str, is_print: bool = False) -> torch.Tensor:
             is_print = False
     return feat
 
-
+@deprecated
 def split_dataset(ratio: float, path: str, output_path: str):
     """Split the dataset into train and test sets. The output will be saved in .csv format, 
     which includes the path, type(train, test, validation), labels, etc.
@@ -110,7 +112,7 @@ def split_dataset(ratio: float, path: str, output_path: str):
     })
     df.to_csv(output_path)
 
-
+@deprecated
 def output_each_set(loaded_path: str, output_path: str):
     header = ['path', 'channel', 'emotion',
               'e-intensity', 'statement', 'actor', 'split']
@@ -202,6 +204,7 @@ def extract_feature(set_path: str, output_path: str, catagory: str):
             writer.writerow(feat)
     print("----------------- "+catagory+" ---------------------")
 
+@deprecated
 def extract_features_of_batch(paths: list, is_print: bool = False) -> torch.Tensor:
     """Extract features of a path list from a batch.
 
@@ -224,7 +227,40 @@ def extract_features_of_batch(paths: list, is_print: bool = False) -> torch.Tens
     # print(ret)
     return ret
         
+def get_wav2vec2_exractor(model_name: str ="facebook/wav2vec2-base-960h",
+                          saved_path: str="./checkpoints/pretrained"):
+    if os.path.exists(saved_path + '/' + 'preprocessor_config.json'):
+        processor = Wav2Vec2Processor.from_pretrained(saved_path)
+        model = Wav2Vec2Model.from_pretrained(saved_path)
+    else:
+        model = Wav2Vec2Model.from_pretrained(model_name)
+        model.save_pretrained(saved_path)
+        processor = Wav2Vec2Processor.from_pretrained(model_name)
+        processor.save_pretrained(saved_path)
+    return (processor, model)
 
+def extractor(processor, model, paths: list, is_print: bool = False) -> torch.Tensor:
+    feats = np.array([])
+    for path in paths:
+        X, sample_rate = librosa.load(path, sr=16000, offset=0, duration=5.0)
+        feat = processor(X, return_tensors="np", sampling_rate=sample_rate, do_normalize=True).input_values
+ 
+        # torch.Size([1, 80000]),  Segment is 5s, sampling_rate is 16000, so get 80000 samples by precessor.
+        if feat.shape[1] != 80000:
+            feat = np.pad(feat, ((0, 0), (0, 80000 - feat.shape[1])), 'constant', constant_values=0)
+        if len(feats) == 0 :
+            feats = feat
+        else:
+            feats = np.concatenate((feats, feat), axis=0)
+
+    feats = torch.Tensor(np.array(feats))
+    # torch.Size([1, 249, 768]) 249 represent time domain, 768 is general feature(is solidable)
+    # 3 dim transpose [batch_size, 249, 768] -> [batch_size, 768, 249]
+    ret = model(feats).last_hidden_state.permute(0, 2, 1)     
+    if is_print:
+        print(feats.shape)
+        print(ret.shape)
+    return ret
 
 
 # if __name__ == '__main__':
@@ -234,6 +270,9 @@ def extract_features_of_batch(paths: list, is_print: bool = False) -> torch.Tens
 
 
     # extract_single_feature("./datasets/archive/Actor_01/03-01-01-01-01-01-01.wav")
+    # paths = ["./datasets/archive/Actor_01/03-01-01-01-01-01-01.wav",
+    #          "./datasets/archive/Actor_01/03-01-01-01-01-02-01.wav"]
+    # extractor(paths, True)
 
 
 

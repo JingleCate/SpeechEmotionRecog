@@ -1,6 +1,6 @@
 train:
   epochs: 1000
-  batch_size: 16
+  batch_size: 8
   learning_rate: 1e-3
   num_workers: 0
   resume: False
@@ -9,53 +9,52 @@ train:
   patience: 3
   factor: 0.95
 
+# BatchNorm1d(768, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True) torch.Size([8, 768, 249])
 # -----------------------------------------------------------------------------------------------------
-# BatchNorm1d(39, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True) torch.Size([16, 39, 300])
+# Conv1d(768, 512, kernel_size=(5,), stride=(1,), padding=same) torch.Size([8, 512, 249])
 # -----------------------------------------------------------------------------------------------------
-# Conv1d(39, 26, kernel_size=(5,), stride=(1,), padding=same) torch.Size([16, 26, 300])
+# ReLU() torch.Size([8, 512, 249])
 # -----------------------------------------------------------------------------------------------------
-# ReLU() torch.Size([16, 26, 300])
+# Conv1d(512, 128, kernel_size=(5,), stride=(1,), padding=same) torch.Size([8, 128, 249])
 # -----------------------------------------------------------------------------------------------------
-# Conv1d(26, 13, kernel_size=(5,), stride=(1,), padding=same) torch.Size([16, 13, 300])
+# ReLU() torch.Size([8, 128, 249])
 # -----------------------------------------------------------------------------------------------------
-# ReLU() torch.Size([16, 13, 300])
+# MaxPool1d(kernel_size=10, stride=3, padding=0, dilation=1, ceil_mode=False) torch.Size([8, 128, 80])
 # -----------------------------------------------------------------------------------------------------
-# MaxPool1d(kernel_size=6, stride=2, padding=0, dilation=1, ceil_mode=False) torch.Size([16, 13, 148])
+# Dropout(p=0.1, inplace=False) torch.Size([8, 128, 80])
 # -----------------------------------------------------------------------------------------------------
-# Dropout(p=0.1, inplace=False) torch.Size([16, 13, 148])
+# Conv1d(128, 32, kernel_size=(5,), stride=(1,), padding=same) torch.Size([8, 32, 80])
 # -----------------------------------------------------------------------------------------------------
-# Conv1d(13, 5, kernel_size=(5,), stride=(1,), padding=same) torch.Size([16, 5, 148])
+# ReLU() torch.Size([8, 32, 80])
 # -----------------------------------------------------------------------------------------------------
-# ReLU() torch.Size([16, 5, 148])
+# Conv1d(32, 1, kernel_size=(5,), stride=(1,), padding=same) torch.Size([8, 1, 80])
 # -----------------------------------------------------------------------------------------------------
-# Conv1d(5, 1, kernel_size=(5,), stride=(1,), padding=same) torch.Size([16, 1, 148])
+# ReLU() torch.Size([8, 1, 80])
 # -----------------------------------------------------------------------------------------------------
-# ReLU() torch.Size([16, 1, 148])
+# MaxPool1d(kernel_size=10, stride=3, padding=0, dilation=1, ceil_mode=False) torch.Size([8, 1, 24])
 # -----------------------------------------------------------------------------------------------------
-# MaxPool1d(kernel_size=6, stride=2, padding=0, dilation=1, ceil_mode=False) torch.Size([16, 1, 72])
+# Flatten(start_dim=1, end_dim=-1) torch.Size([8, 24])
 # -----------------------------------------------------------------------------------------------------
-# Flatten(start_dim=1, end_dim=-1) torch.Size([16, 72])
+# Linear(in_features=24, out_features=8, bias=True) torch.Size([8, 8])
 # -----------------------------------------------------------------------------------------------------
-# Linear(in_features=72, out_features=8, bias=True) torch.Size([16, 8])
-# -----------------------------------------------------------------------------------------------------
-# Softmax(dim=1) torch.Size([16, 8])
+# Softmax(dim=1) torch.Size([8, 8])
 # -----------------------------------------------------------------------------------------------------
 single_speech_recog_net:
-  in_channels: 39
-  in_length: 300
+  in_channels: 768
+  in_length: 249
   classes: 8
   padding: same
   hidden_layer: 
-    - 26
-    - 13
-    - 5
+    - 512
+    - 128
+    - 32
     - 1
   maxpool:
     layers: 2 
     # the 2nd in_len is invalid, just as a reference.
     in_len:
-      - 300
-      - 150
+      - 249
+      - 64
     pool_padding_size:
       - 0
       - 0
@@ -63,9 +62,9 @@ single_speech_recog_net:
       - 1
       - 1
     kernal_size:
-      - 6
-      - 6
+      - 10
+      - 10
     stride:
-      - 2
-      - 2
+      - 3
+      - 3
     

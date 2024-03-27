@@ -13,7 +13,7 @@ from tqdm import tqdm
 from sklearn.metrics import classification_report
 
 from dataset import SpeechDataset
-from dataproc import extract_features_of_batch
+from dataproc import get_wav2vec2_exractor, extractor
 from utils.logtool import log, myLogger
 from model.single_sentence_recog import SSRNetwork, LABELS
 
@@ -92,7 +92,7 @@ def train(
     # optimizer = optim.SGD(net.parameters(), lr=learning_rate, momentum=momentum)
     optimizer = optim.Adam(net.parameters(), lr=learning_rate, eps=1e-10, amsgrad=True)
     # lr scheduler
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=factor, patience=patience, min_lr=1e-8)
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=factor, patience=patience, min_lr=1e-10)
     
     # load checkpoint and why?
     ep_temp = 0
@@ -122,19 +122,20 @@ def train(
             counter = 0 # counter
             
             # each epoch training
-            for idx, sample_batch in enumerate(tqdm(train_dataloader)):
+            # tqdm(train_dataloader, desc="iters in epoch {}".format(epoch + ep_temp + 1))
+            for idx, sample_batch in enumerate(train_dataloader):
                 # path, label is a batch list.
                 # labels: tensor([2, 4, 6, 2]), values: 0~7 mapping for 8 locations
                 paths, labels = sample_batch["path"], (sample_batch["label"] - 1).to(device)
-                # extract features, Simplified feature size:  (bacth_size, 216) 
-                feats = extract_features_of_batch(paths, is_print=False).to(device) # to same device
-                # print(feats, feats.shape) torch.Size([batch_size, 39, 300])
+
+                # feats = extractor(processor, postprocessor, paths, is_print=False).to(device) # to same device
+                # print(feats, feats.shape) torch.Size([batch_size, 768, 249]) # 5s esgment.
                 # return
 
                 # Optimizing
                 optimizer.zero_grad()
                 # Forward propagation
-                outputs = net(feats).to(device)
+                outputs = net(paths).to(device)
                 # print(outputs, labels)
                 # compute CRLoss
                 loss = criterion(outputs, labels)
@@ -146,6 +147,7 @@ def train(
                 optimizer.step()
 
                 running_loss += loss.item()    # add each iteration loss
+                print(loss.item())
                 counter += 1
             # if idx % 150 == 0 and idx != 0:
             # Compute average loss each epoch
@@ -169,10 +171,10 @@ def train(
                         # labels: tensor([2, 4, 6, 2])
                         paths, labels = sample_batch["path"], (sample_batch["label"] - 1).to(device)
                         # extract features, Simplified feature size:  (bacth_size, 216) 
-                        feats = extract_features_of_batch(paths, is_print=False).to(device)
+                        # feats = extractor(processor, postprocessor, paths, is_print=False).to(device)
 
                         # (N,C,L), where N is the batch size, C is the number of features or channels, and L is the sequence length
-                        outputs = net(feats)
+                        outputs = net(paths)
                         # print(outputs.data, labels.data)
                         values, predict = torch.max(outputs.data, dim=1)
                         # print(values.data, predict.data)

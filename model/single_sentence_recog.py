@@ -1,7 +1,15 @@
+import os
+import sys
 import torch
+import librosa
 import torch.nn as nn
 import torch.nn.functional as feats
 import numpy as np
+
+PROJECT_PATH = r"C:/Users/21552/Desktop/Main/Projects/SpeechMotionRecog"
+sys.path.append(PROJECT_PATH)
+
+from transformers import Wav2Vec2Processor, Wav2Vec2Model
 
 LABELS = [
      "neutral",
@@ -51,6 +59,8 @@ class SSRNetwork(nn.Module):
 
         # maxpool1d out length
         self.out_len1, self.out_len2 = self.compute_output_len(maxpool_config)
+        self.processor, self.postprocessor = self.get_wav2vec2_exractor()
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         self.net = nn.Sequential(
             nn.BatchNorm1d(in_channels),
@@ -78,8 +88,7 @@ class SSRNetwork(nn.Module):
             nn.Linear(self.out_len2, self.classes),
             nn.Softmax(dim=1)
         )
-        # self.init_weight()
-
+        self.init_weight()
 
     def init_weight(self):
         for m in self.net:
@@ -89,7 +98,8 @@ class SSRNetwork(nn.Module):
                 nn.init.constant_(m.weight, 1)
                 nn.init.constant_(m.bias, 0)
 
-    def forward(self, x):
+    def forward(self, paths):
+        x = self.extractor(paths)
         # x = self.net(x) 这样写无法查看和调试中间参数形状
         if self.is_print:
             print(self.out_len1, self.out_len2)
@@ -99,6 +109,7 @@ class SSRNetwork(nn.Module):
                 print(self.net[i], x.shape)
                 print("-----------------------------------------------------------------------------------------------------")
         return x
+        
     
     def compute_output_len(self, maxpool_config):
         # there compute the maxpool layer output length.
@@ -121,7 +132,41 @@ class SSRNetwork(nn.Module):
                             - self.dilation[1] * (self.kernal_size[1] - 1) - 1) / self.stride[1] + 1))
         
         return (out_len1, out_len2)
-# if __name__ == "__main__":
-#     # model = SSRNetwork().to('cpu')
-#     model = SSRNetwork()
-#     print(model)
+    
+    # @staticmethod
+    def get_wav2vec2_exractor(self):
+        model_name = "facebook/wav2vec2-base-960h",
+        saved_path = "checkpoints/pretrained"
+        if os.path.exists(saved_path + '/' + 'preprocessor_config.json'):
+            processor = Wav2Vec2Processor.from_pretrained(saved_path)
+            model = Wav2Vec2Model.from_pretrained(saved_path)
+        else:
+            model = Wav2Vec2Model.from_pretrained(model_name)
+            model.save_pretrained(saved_path)
+            processor = Wav2Vec2Processor.from_pretrained(model_name)
+            processor.save_pretrained(saved_path)
+        return (processor, model)
+    
+    def extractor(self, paths):
+        feats = np.array([])
+        for path in paths:
+            X, sample_rate = librosa.load(path, sr=16000, offset=0, duration=5.0)
+            feat = self.processor(X, return_tensors="np", sampling_rate=sample_rate, do_normalize=True).input_values
+    
+            # torch.Size([1, 80000]),  Segment is 5s, sampling_rate is 16000, so get 80000 samples by precessor.
+            if feat.shape[1] != 80000:
+                feat = np.pad(feat, ((0, 0), (0, 80000 - feat.shape[1])), 'constant', constant_values=0)
+            if len(feats) == 0 :
+                feats = feat
+            else:
+                feats = np.concatenate((feats, feat), axis=0)
+
+        feats = torch.Tensor(np.array(feats)).to(self.device)
+        # torch.Size([1, 249, 768]) 249 represent time domain, 768 is general feature(is solidable)
+        # 3 dim transpose [batch_size, 249, 768] -> [batch_size, 768, 249]
+        ret = self.postprocessor(feats).last_hidden_state.permute(0, 2, 1)     
+        if self.is_print:
+            print(feats.shape)
+            print(ret.shape)
+        return ret
+
