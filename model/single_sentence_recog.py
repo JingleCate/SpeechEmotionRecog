@@ -63,8 +63,8 @@ class SSRNetwork(nn.Module):
         # freeze the pretrained parameters
         # for param in self.processor.parameters():
         #     param.requires_grad = False
-        for param in self.postprocessor.parameters():
-            param.requires_grad_(False)
+        # for param in self.postprocessor.parameters():
+        #     param.requires_grad_(False)
         self.postprocessor.freeze_feature_encoder()
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -75,9 +75,9 @@ class SSRNetwork(nn.Module):
             # nn.Conv1d(in_channels=in_channels, out_channels=256, kernel_size=3, padding="same"),
             # nn.ReLU(),
             nn.Conv1d(in_channels=in_channels, out_channels=hidden_layer[0], kernel_size=5, padding=self.padding),
-            nn.Tanh(),
+            nn.PReLU(),
             nn.Conv1d(in_channels=hidden_layer[0], out_channels=hidden_layer[1], kernel_size=5, padding=self.padding),
-            nn.Tanh(),
+            nn.PReLU(),
             nn.MaxPool1d(kernel_size=maxpool_config["kernal_size"][0], stride=maxpool_config["stride"][0]),
 
             # Dropout 防止过拟合
@@ -85,15 +85,15 @@ class SSRNetwork(nn.Module):
 
             # there should be (batch_size, hidden_layer[1], 198)
             nn.Conv1d(in_channels=hidden_layer[1], out_channels=hidden_layer[2], kernel_size=5, padding=self.padding),
-            nn.Tanh(),
+            nn.PReLU(),
             nn.Conv1d(in_channels=hidden_layer[2], out_channels=hidden_layer[3], kernel_size=5, padding=self.padding),
-            nn.Tanh(),
+            nn.PReLU(),
             nn.MaxPool1d(kernel_size=maxpool_config["kernal_size"][1], stride=maxpool_config["stride"][1]),
 
             # 展平 + 全连接
             nn.Flatten(),
             nn.Linear(self.out_len2, self.classes),
-            nn.Tanh()
+            nn.PReLU()
             # nn.Softmax(dim=1) #  nn.Softmax is in CrossEntropyLoss, dont use CELoss, this will cause train error
         )
         self.init_weight()
@@ -112,6 +112,9 @@ class SSRNetwork(nn.Module):
             elif isinstance(m, nn.BatchNorm1d):
                 nn.init.constant_(m.weight, 1)
                 nn.init.constant_(m.bias, 0)
+            elif isinstance(m, nn.Linear):
+                nn.init.normal_(m.weight)
+                nn.init.zeros_(m.bias)
 
     def forward(self, paths):
         x = self.extractor(paths)

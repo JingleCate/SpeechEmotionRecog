@@ -256,10 +256,6 @@ def train(
             counter = 0
             running_loss = 0
     finally:
-        # save checkpoint
-        torch.save(max_to_save, r"checkpoints/SSR_epoch_%d_max_acc_%.3f.pth" % (max_to_save["epoch"], max_to_save["acc"]))
-        torch.save(last_to_save, r"checkpoints/SSR_epoch_%d_last_acc_%.3f.pth" % (last_to_save["epoch"], last_to_save["acc"]))
-        
         df1 = pd.DataFrame({"epoch": rec_epoch,
                             "lr": lr_,
                             "losses": losses_,
@@ -272,6 +268,11 @@ def train(
         # whether to insert columns headers or not.
         header = False if os.path.exists("./records/train_eval.csv") else True
         df1.to_csv("./records/train_eval.csv", mode='a', encoding="utf-8", header=header, index=False)
+        
+        # save checkpoint
+        torch.save(max_to_save, r"checkpoints/SSR_epoch_%d_max_acc_%.3f.pth" % (max_to_save["epoch"], max_to_save["acc"]))
+        torch.save(last_to_save, r"checkpoints/SSR_epoch_%d_last_acc_%.3f.pth" % (last_to_save["epoch"], last_to_save["acc"]))
+        
 
 if __name__ == "__main__":
     # 载入配置

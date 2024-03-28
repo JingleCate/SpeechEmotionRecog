@@ -47,7 +47,6 @@ def extract_single_feature(path: str, is_print: bool = False) -> torch.Tensor:
             is_print = False
     return feat
 
-@deprecated
 def split_dataset(ratio: float, path: str, output_path: str):
     """Split the dataset into train and test sets. The output will be saved in .csv format, 
     which includes the path, type(train, test, validation), labels, etc.
@@ -112,7 +111,6 @@ def split_dataset(ratio: float, path: str, output_path: str):
     })
     df.to_csv(output_path)
 
-@deprecated
 def output_each_set(loaded_path: str, output_path: str):
     header = ['path', 'channel', 'emotion',
               'e-intensity', 'statement', 'actor', 'split']
@@ -263,16 +261,17 @@ def extractor(processor, model, paths: list, is_print: bool = False) -> torch.Te
     return ret
 
 
-# if __name__ == '__main__':
-    # split_dataset(ratio=0.8, path="./datasets/archive",
-    #               output_path="./dataproc.csv")
-    # output_each_set(loaded_path="./dataproc.csv", output_path="./datasets")
+if __name__ == '__main__':
+#     split_dataset(ratio=0.8, path="./datasets/archive",
+#                   output_path="./dataproc.csv")
+#     output_each_set(loaded_path="./dataproc.csv", output_path="./datasets")
 
 
     # extract_single_feature("./datasets/archive/Actor_01/03-01-01-01-01-01-01.wav")
-    # paths = ["./datasets/archive/Actor_01/03-01-01-01-01-01-01.wav",
-    #          "./datasets/archive/Actor_01/03-01-01-01-01-02-01.wav"]
-    # extractor(paths, True)
+    paths = ["./datasets/archive/Actor_01/03-01-01-01-01-01-01.wav",
+             "./datasets/archive/Actor_01/03-01-01-01-01-02-01.wav"]
+    p1, p2 = get_wav2vec2_exractor()
+    extractor(p1, p2, paths, True)
 
 
 
