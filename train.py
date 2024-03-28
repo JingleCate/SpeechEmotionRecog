@@ -122,8 +122,7 @@ def train(
             counter = 0 # counter
             
             # each epoch training
-            # tqdm(train_dataloader, desc="iters in epoch {}".format(epoch + ep_temp + 1))
-            for idx, sample_batch in enumerate(train_dataloader):
+            for idx, sample_batch in enumerate(tqdm(train_dataloader, desc="iters in epoch {}".format(epoch + ep_temp + 1))):
                 # path, label is a batch list.
                 # labels: tensor([2, 4, 6, 2]), values: 0~7 mapping for 8 locations
                 paths, labels = sample_batch["path"], (sample_batch["label"] - 1).to(device)
@@ -147,7 +146,7 @@ def train(
                 optimizer.step()
 
                 running_loss += loss.item()    # add each iteration loss
-                print(loss.item())
+                # print(loss.item())
                 counter += 1
             # if idx % 150 == 0 and idx != 0:
             # Compute average loss each epoch
@@ -178,6 +177,7 @@ def train(
                         # print(outputs.data, labels.data)
                         values, predict = torch.max(outputs.data, dim=1)
                         # print(values.data, predict.data)
+                        # return
 
                         val_total_labels = torch.hstack((val_total_labels, labels.data))
                         val_total_pred = torch.hstack((val_total_pred, predict.data))

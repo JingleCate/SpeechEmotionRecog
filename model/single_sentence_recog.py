@@ -3,7 +3,7 @@ import sys
 import torch
 import librosa
 import torch.nn as nn
-import torch.nn.functional as feats
+import torch.nn.functional as F
 import numpy as np
 
 PROJECT_PATH = r"C:/Users/21552/Desktop/Main/Projects/SpeechMotionRecog"
@@ -60,6 +60,13 @@ class SSRNetwork(nn.Module):
         # maxpool1d out length
         self.out_len1, self.out_len2 = self.compute_output_len(maxpool_config)
         self.processor, self.postprocessor = self.get_wav2vec2_exractor()
+        # freeze the pretrained parameters
+        # for param in self.processor.parameters():
+        #     param.requires_grad = False
+        for param in self.postprocessor.parameters():
+            param.requires_grad_(False)
+        self.postprocessor.freeze_feature_encoder()
+
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         self.net = nn.Sequential(
@@ -68,9 +75,9 @@ class SSRNetwork(nn.Module):
             # nn.Conv1d(in_channels=in_channels, out_channels=256, kernel_size=3, padding="same"),
             # nn.ReLU(),
             nn.Conv1d(in_channels=in_channels, out_channels=hidden_layer[0], kernel_size=5, padding=self.padding),
-            nn.ReLU(),
+            nn.Tanh(),
             nn.Conv1d(in_channels=hidden_layer[0], out_channels=hidden_layer[1], kernel_size=5, padding=self.padding),
-            nn.ReLU(),
+            nn.Tanh(),
             nn.MaxPool1d(kernel_size=maxpool_config["kernal_size"][0], stride=maxpool_config["stride"][0]),
 
             # Dropout 防止过拟合
@@ -78,17 +85,25 @@ class SSRNetwork(nn.Module):
 
             # there should be (batch_size, hidden_layer[1], 198)
             nn.Conv1d(in_channels=hidden_layer[1], out_channels=hidden_layer[2], kernel_size=5, padding=self.padding),
-            nn.ReLU(),
+            nn.Tanh(),
             nn.Conv1d(in_channels=hidden_layer[2], out_channels=hidden_layer[3], kernel_size=5, padding=self.padding),
-            nn.ReLU(),
+            nn.Tanh(),
             nn.MaxPool1d(kernel_size=maxpool_config["kernal_size"][1], stride=maxpool_config["stride"][1]),
 
             # 展平 + 全连接
             nn.Flatten(),
             nn.Linear(self.out_len2, self.classes),
-            nn.Softmax(dim=1)
+            nn.Tanh()
+            # nn.Softmax(dim=1) #  nn.Softmax is in CrossEntropyLoss, dont use CELoss, this will cause train error
         )
         self.init_weight()
+        self.beta_net = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(768*249, 1000),
+            nn.ReLU(),
+            nn.Linear(1000, self.classes),
+            nn.Softmax(dim=1)
+        )
 
     def init_weight(self):
         for m in self.net:
@@ -109,6 +124,14 @@ class SSRNetwork(nn.Module):
                 print(self.net[i], x.shape)
                 print("-----------------------------------------------------------------------------------------------------")
         return x
+        # if self.is_print:
+        #     print(self.out_len1, self.out_len2)
+        # for i in range(len(self.beta_net)):
+        #     x = self.beta_net[i](x)
+        #     if self.is_print:
+        #         print(self.beta_net[i], x.shape)
+        #         print("-----------------------------------------------------------------------------------------------------")
+        # return x
         
     
     def compute_output_len(self, maxpool_config):
@@ -135,7 +158,7 @@ class SSRNetwork(nn.Module):
     
     # @staticmethod
     def get_wav2vec2_exractor(self):
-        model_name = "facebook/wav2vec2-base-960h",
+        model_name = "facebook/wav2vec2-base-960h"
         saved_path = "checkpoints/pretrained"
         if os.path.exists(saved_path + '/' + 'preprocessor_config.json'):
             processor = Wav2Vec2Processor.from_pretrained(saved_path)
@@ -148,23 +171,24 @@ class SSRNetwork(nn.Module):
         return (processor, model)
     
     def extractor(self, paths):
-        feats = np.array([])
+        feats = torch.Tensor([]).to(self.device)
         for path in paths:
             X, sample_rate = librosa.load(path, sr=16000, offset=0, duration=5.0)
-            feat = self.processor(X, return_tensors="np", sampling_rate=sample_rate, do_normalize=True).input_values
+            feat = self.processor(X, return_tensors="pt", sampling_rate=sample_rate).input_values.to(self.device)
     
             # torch.Size([1, 80000]),  Segment is 5s, sampling_rate is 16000, so get 80000 samples by precessor.
             if feat.shape[1] != 80000:
-                feat = np.pad(feat, ((0, 0), (0, 80000 - feat.shape[1])), 'constant', constant_values=0)
+                feat = F.pad(feat, (0, 80000 - feat.shape[1], 0, 0), 'constant', value=0)
             if len(feats) == 0 :
                 feats = feat
             else:
-                feats = np.concatenate((feats, feat), axis=0)
+                feats = torch.cat((feats, feat), dim=0)
+        # print(feats.shape)
 
-        feats = torch.Tensor(np.array(feats)).to(self.device)
+        feats = torch.Tensor(feats).to(self.device)
         # torch.Size([1, 249, 768]) 249 represent time domain, 768 is general feature(is solidable)
         # 3 dim transpose [batch_size, 249, 768] -> [batch_size, 768, 249]
-        ret = self.postprocessor(feats).last_hidden_state.permute(0, 2, 1)     
+        ret = self.postprocessor(feats).last_hidden_state.permute(0, 2, 1).to(self.device)     
         if self.is_print:
             print(feats.shape)
             print(ret.shape)
