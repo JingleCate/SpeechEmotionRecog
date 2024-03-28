@@ -240,20 +240,20 @@ def get_wav2vec2_exractor(model_name: str ="facebook/wav2vec2-base-960h",
 def extractor(processor, model, paths: list, is_print: bool = False) -> torch.Tensor:
     feats = np.array([])
     for path in paths:
-        X, sample_rate = librosa.load(path, sr=16000, offset=0, duration=5.0)
+        X, sample_rate = librosa.load(path, sr=16000, offset=0, duration=3.0)
         feat = processor(X, return_tensors="np", sampling_rate=sample_rate, do_normalize=True).input_values
  
-        # torch.Size([1, 80000]),  Segment is 5s, sampling_rate is 16000, so get 80000 samples by precessor.
-        if feat.shape[1] != 80000:
-            feat = np.pad(feat, ((0, 0), (0, 80000 - feat.shape[1])), 'constant', constant_values=0)
+        # torch.Size([1, 48000]),  Segment is 5s, sampling_rate is 16000, so get 48000 samples by precessor.
+        if feat.shape[1] != 48000:
+            feat = np.pad(feat, ((0, 0), (0, 48000 - feat.shape[1])), 'constant', constant_values=0)
         if len(feats) == 0 :
             feats = feat
         else:
             feats = np.concatenate((feats, feat), axis=0)
 
     feats = torch.Tensor(np.array(feats))
-    # torch.Size([1, 249, 768]) 249 represent time domain, 768 is general feature(is solidable)
-    # 3 dim transpose [batch_size, 249, 768] -> [batch_size, 768, 249]
+    # torch.Size([1, 149, 768]) 249 represent time domain, 768 is general feature(is solidable)
+    # 3 dim transpose [batch_size, 249, 768] -> [batch_size, 768, 149]
     ret = model(feats).last_hidden_state.permute(0, 2, 1)     
     if is_print:
         print(feats.shape)
@@ -261,17 +261,17 @@ def extractor(processor, model, paths: list, is_print: bool = False) -> torch.Te
     return ret
 
 
-if __name__ == '__main__':
+# if __name__ == '__main__':
 #     split_dataset(ratio=0.8, path="./datasets/archive",
 #                   output_path="./dataproc.csv")
 #     output_each_set(loaded_path="./dataproc.csv", output_path="./datasets")
 
 
     # extract_single_feature("./datasets/archive/Actor_01/03-01-01-01-01-01-01.wav")
-    paths = ["./datasets/archive/Actor_01/03-01-01-01-01-01-01.wav",
-             "./datasets/archive/Actor_01/03-01-01-01-01-02-01.wav"]
-    p1, p2 = get_wav2vec2_exractor()
-    extractor(p1, p2, paths, True)
+    # paths = ["./datasets/archive/Actor_01/03-01-01-01-01-01-01.wav",
+    #          "./datasets/archive/Actor_01/03-01-01-01-01-02-01.wav"]
+    # p1, p2 = get_wav2vec2_exractor()
+    # extractor(p1, p2, paths, True)
 
 
 

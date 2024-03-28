@@ -9,39 +9,39 @@ train:
   patience: 3
   factor: 0.95
 
-# BatchNorm1d(768, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True) torch.Size([8, 768, 249])
+# BatchNorm1d(768, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True) torch.Size([8, 768, 149])
 # -----------------------------------------------------------------------------------------------------
-# Conv1d(768, 512, kernel_size=(5,), stride=(1,), padding=same) torch.Size([8, 512, 249])
+# Conv1d(768, 512, kernel_size=(5,), stride=(1,), padding=same) torch.Size([8, 512, 149])
 # -----------------------------------------------------------------------------------------------------
-# ReLU() torch.Size([8, 512, 249])
+# PReLU(num_parameters=1) torch.Size([8, 512, 149])
 # -----------------------------------------------------------------------------------------------------
-# Conv1d(512, 128, kernel_size=(5,), stride=(1,), padding=same) torch.Size([8, 128, 249])
+# Conv1d(512, 128, kernel_size=(5,), stride=(1,), padding=same) torch.Size([8, 128, 149])
 # -----------------------------------------------------------------------------------------------------
-# ReLU() torch.Size([8, 128, 249])
+# PReLU(num_parameters=1) torch.Size([8, 128, 149])
 # -----------------------------------------------------------------------------------------------------
-# MaxPool1d(kernel_size=10, stride=3, padding=0, dilation=1, ceil_mode=False) torch.Size([8, 128, 80])
+# MaxPool1d(kernel_size=5, stride=2, padding=0, dilation=1, ceil_mode=False) torch.Size([8, 128, 73])
 # -----------------------------------------------------------------------------------------------------
-# Dropout(p=0.1, inplace=False) torch.Size([8, 128, 80])
+# Dropout(p=0.1, inplace=False) torch.Size([8, 128, 73])
 # -----------------------------------------------------------------------------------------------------
-# Conv1d(128, 32, kernel_size=(5,), stride=(1,), padding=same) torch.Size([8, 32, 80])
+# Conv1d(128, 32, kernel_size=(5,), stride=(1,), padding=same) torch.Size([8, 32, 73])
 # -----------------------------------------------------------------------------------------------------
-# ReLU() torch.Size([8, 32, 80])
+# PReLU(num_parameters=1) torch.Size([8, 32, 73])
 # -----------------------------------------------------------------------------------------------------
-# Conv1d(32, 1, kernel_size=(5,), stride=(1,), padding=same) torch.Size([8, 1, 80])
+# Conv1d(32, 1, kernel_size=(5,), stride=(1,), padding=same) torch.Size([8, 1, 73])
 # -----------------------------------------------------------------------------------------------------
-# ReLU() torch.Size([8, 1, 80])
+# PReLU(num_parameters=1) torch.Size([8, 1, 73])
 # -----------------------------------------------------------------------------------------------------
-# MaxPool1d(kernel_size=10, stride=3, padding=0, dilation=1, ceil_mode=False) torch.Size([8, 1, 24])
+# MaxPool1d(kernel_size=5, stride=2, padding=0, dilation=1, ceil_mode=False) torch.Size([8, 1, 35])
 # -----------------------------------------------------------------------------------------------------
-# Flatten(start_dim=1, end_dim=-1) torch.Size([8, 24])
+# Flatten(start_dim=1, end_dim=-1) torch.Size([8, 35])
 # -----------------------------------------------------------------------------------------------------
-# Linear(in_features=24, out_features=8, bias=True) torch.Size([8, 8])
+# Linear(in_features=35, out_features=8, bias=True) torch.Size([8, 8])
 # -----------------------------------------------------------------------------------------------------
-# Softmax(dim=1) torch.Size([8, 8])
+# PReLU(num_parameters=1) torch.Size([8, 8])
 # -----------------------------------------------------------------------------------------------------
 single_speech_recog_net:
   in_channels: 768
-  in_length: 249
+  in_length: 149
   classes: 8
   padding: same
   hidden_layer: 
@@ -53,7 +53,7 @@ single_speech_recog_net:
     layers: 2 
     # the 2nd in_len is invalid, just as a reference.
     in_len:
-      - 249
+      - 149
       - 64
     pool_padding_size:
       - 0
@@ -62,9 +62,9 @@ single_speech_recog_net:
       - 1
       - 1
     kernal_size:
-      - 10
-      - 10
+      - 5
+      - 5
     stride:
-      - 3
-      - 3
+      - 2
+      - 2
     

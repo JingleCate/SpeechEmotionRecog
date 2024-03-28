@@ -176,12 +176,12 @@ class SSRNetwork(nn.Module):
     def extractor(self, paths):
         feats = torch.Tensor([]).to(self.device)
         for path in paths:
-            X, sample_rate = librosa.load(path, sr=16000, offset=0, duration=5.0)
+            X, sample_rate = librosa.load(path, sr=16000, offset=0, duration=3.0)
             feat = self.processor(X, return_tensors="pt", sampling_rate=sample_rate).input_values.to(self.device)
     
-            # torch.Size([1, 80000]),  Segment is 5s, sampling_rate is 16000, so get 80000 samples by precessor.
-            if feat.shape[1] != 80000:
-                feat = F.pad(feat, (0, 80000 - feat.shape[1], 0, 0), 'constant', value=0)
+            # torch.Size([1, 48000]),  Segment is 5s, sampling_rate is 16000, so get 48000 samples by precessor.
+            if feat.shape[1] != 48000:
+                feat = F.pad(feat, (0, 48000 - feat.shape[1], 0, 0), 'constant', value=0)
             if len(feats) == 0 :
                 feats = feat
             else:
