@@ -16,6 +16,7 @@ from dataset import SpeechDataset
 from dataproc import get_wav2vec2_exractor, extractor
 from utils.logtool import log, myLogger
 from model.single_sentence_recog import SSRNetwork, LABELS
+from utils.plot import plot_coffusion_matrix
 
 # Get a logger by filename.
 logger = myLogger(filename=__file__.split('.')[0] + '.log').get_logger
@@ -200,6 +201,9 @@ def train(
                 #     accuracy                           0.24       144
                 #    macro avg       0.29      0.26      0.22       144
                 # weighted avg       0.30      0.24      0.21       144
+                # plot_coffusion_matrix(val_total_labels.cpu().numpy().astype(int),
+                #                       val_total_pred.cpu().numpy().astype(int))
+                # return
                 report_dict = classification_report(val_total_labels.cpu().numpy().astype(int), 
                                                     val_total_pred.cpu().numpy().astype(int), 
                                                     labels=range(len(LABELS)), 

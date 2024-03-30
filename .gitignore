@@ -7,3 +7,5 @@ train.log
 records/*.csv
 .ipynb_checkpoints/
 checkpoints/pretrained
+checkpoints/3rd
+checkpoints/SSR_checkpoint.pt

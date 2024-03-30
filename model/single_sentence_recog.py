@@ -63,8 +63,9 @@ class SSRNetwork(nn.Module):
         # freeze the pretrained parameters
         # for param in self.processor.parameters():
         #     param.requires_grad = False
-        # for param in self.postprocessor.parameters():
-        #     param.requires_grad_(False)
+        # freeze the pretrained parameters.
+        for param in self.postprocessor.parameters():
+            param.requires_grad_(False)
         self.postprocessor.freeze_feature_encoder()
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -93,16 +94,15 @@ class SSRNetwork(nn.Module):
             # 展平 + 全连接
             nn.Flatten(),
             nn.Linear(self.out_len2, self.classes),
-            nn.PReLU()
+            # nn.PReLU()
             # nn.Softmax(dim=1) #  nn.Softmax is in CrossEntropyLoss, dont use CELoss, this will cause train error
         )
         self.init_weight()
         self.beta_net = nn.Sequential(
             nn.Flatten(),
-            nn.Linear(768*249, 1000),
-            nn.ReLU(),
-            nn.Linear(1000, self.classes),
-            nn.Softmax(dim=1)
+            nn.Linear(768*149, 1000),
+            nn.PReLU(),
+            nn.Linear(1000, self.classes)
         )
 
     def init_weight(self):
@@ -119,22 +119,22 @@ class SSRNetwork(nn.Module):
     def forward(self, paths):
         x = self.extractor(paths)
         # x = self.net(x) 这样写无法查看和调试中间参数形状
-        if self.is_print:
-            print(self.out_len1, self.out_len2)
-        for i in range(len(self.net)):
-            x = self.net[i](x)
-            if self.is_print:
-                print(self.net[i], x.shape)
-                print("-----------------------------------------------------------------------------------------------------")
-        return x
         # if self.is_print:
         #     print(self.out_len1, self.out_len2)
-        # for i in range(len(self.beta_net)):
-        #     x = self.beta_net[i](x)
+        # for i in range(len(self.net)):
+        #     x = self.net[i](x)
         #     if self.is_print:
-        #         print(self.beta_net[i], x.shape)
+        #         print(self.net[i], x.shape)
         #         print("-----------------------------------------------------------------------------------------------------")
         # return x
+        if self.is_print:
+            print(self.out_len1, self.out_len2)
+        for i in range(len(self.beta_net)):
+            x = self.beta_net[i](x)
+            if self.is_print:
+                print(self.beta_net[i], x.shape)
+                print("-----------------------------------------------------------------------------------------------------")
+        return x
         
     
     def compute_output_len(self, maxpool_config):
