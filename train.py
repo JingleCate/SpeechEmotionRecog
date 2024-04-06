@@ -85,6 +85,7 @@ def train(
                      padding=net_config["padding"],
                      maxpool_config=net_config["maxpool"],
                      classes=net_config["classes"],
+                     device=device
                      )
     net.to(device)
     # 定义损失策略和优化器

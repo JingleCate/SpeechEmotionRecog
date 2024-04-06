@@ -151,7 +151,6 @@ def output_each_set(loaded_path: str, output_path: str):
         for row in test_csv:
             writer.writerow(row)
 
-# TODO modify the duration and offset.
 @deprecated
 def extract_feature(set_path: str, output_path: str, catagory: str):
     """Extract features from audio files from a set of train set or validation set or test set.

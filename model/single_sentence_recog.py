@@ -29,7 +29,9 @@ class SSRNetwork(nn.Module):
             hidden_layer: list=[26, 13, 5, 1],
             padding: str = "same",
             maxpool_config: dict = None,
-            classes: int=8
+            classes: int=8,
+            infer: bool = False,
+            device: str = "cpu"
         ):
         """Classificator of a single audio.
         
@@ -56,6 +58,9 @@ class SSRNetwork(nn.Module):
         self.hidden_layer = hidden_layer
         self.padding = padding
         self.classes = classes
+        self.infer = infer
+
+        self.sr = 16000
 
         # maxpool1d out length
         self.out_len1, self.out_len2 = self.compute_output_len(maxpool_config)
@@ -68,7 +73,7 @@ class SSRNetwork(nn.Module):
             param.requires_grad_(False)
         self.postprocessor.freeze_feature_encoder()
 
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.device = device
 
         self.net = nn.Sequential(
             nn.BatchNorm1d(in_channels),
@@ -116,8 +121,8 @@ class SSRNetwork(nn.Module):
                 nn.init.normal_(m.weight)
                 nn.init.zeros_(m.bias)
 
-    def forward(self, paths):
-        x = self.extractor(paths)
+    def forward(self, paths_or_wave: list, is_seg: bool=False):
+        x = self.extractor(paths_or_wave, is_seg)
         # x = self.net(x) 这样写无法查看和调试中间参数形状
         # if self.is_print:
         #     print(self.out_len1, self.out_len2)
@@ -163,6 +168,11 @@ class SSRNetwork(nn.Module):
     def get_wav2vec2_exractor(self):
         model_name = "facebook/wav2vec2-base-960h"
         saved_path = "checkpoints/pretrained"
+        # if self.infer:
+        #     processor = Wav2Vec2Processor
+        #     model = Wav2Vec2Model
+        #     return (processor, model)
+        
         if os.path.exists(saved_path + '/' + 'preprocessor_config.json'):
             processor = Wav2Vec2Processor.from_pretrained(saved_path)
             model = Wav2Vec2Model.from_pretrained(saved_path)
@@ -173,27 +183,37 @@ class SSRNetwork(nn.Module):
             processor.save_pretrained(saved_path)
         return (processor, model)
     
-    def extractor(self, paths):
+    def extractor(self, paths_or_wave, is_seg: bool=False):
         feats = torch.Tensor([]).to(self.device)
-        for path in paths:
-            X, sample_rate = librosa.load(path, sr=16000, offset=0, duration=3.0)
-            feat = self.processor(X, return_tensors="pt", sampling_rate=sample_rate).input_values.to(self.device)
-    
-            # torch.Size([1, 48000]),  Segment is 5s, sampling_rate is 16000, so get 48000 samples by precessor.
-            if feat.shape[1] != 48000:
-                feat = F.pad(feat, (0, 48000 - feat.shape[1], 0, 0), 'constant', value=0)
-            if len(feats) == 0 :
-                feats = feat
-            else:
-                feats = torch.cat((feats, feat), dim=0)
-        # print(feats.shape)
+        if is_seg:
+            for wave in paths_or_wave:
+                feats = self._get_feats(wave, feats)
+        else:
+            for path in paths_or_wave:
+                X, sample_rate = librosa.load(path, sr=self.sr, offset=0, duration=3.0)
+                feats = self._get_feats(X, feats)
+            # print(feats.shape)
 
         feats = torch.Tensor(feats).to(self.device)
         # torch.Size([1, 249, 768]) 249 represent time domain, 768 is general feature(is solidable)
         # 3 dim transpose [batch_size, 249, 768] -> [batch_size, 768, 249]
+        
         ret = self.postprocessor(feats).last_hidden_state.permute(0, 2, 1).to(self.device)     
         if self.is_print:
             print(feats.shape)
             print(ret.shape)
         return ret
+    
+    def _get_feats(self, X, feats):
+        feat = self.processor(X, return_tensors="pt", sampling_rate=self.sr).input_values.to(self.device)
+        
+        # torch.Size([1, 48000]),  Segment is 5s, sampling_rate is 16000, so get 48000 samples by precessor.
+        if feat.shape[1] != 48000:   # padding
+            feat = F.pad(feat, (0, 48000 - feat.shape[1], 0, 0), 'constant', value=0)
+        if len(feats) == 0 :
+            feats = feat
+        else:
+            feats = torch.cat((feats, feat), dim=0)
+        return feats
+
 
