@@ -1,17 +1,30 @@
+
+#   ____                       _       _____                 _   _               ____                
+#  / ___| _ __   ___  ___  ___| |__   | ____|_ __ ___   ___ | |_(_) ___  _ __   |  _ \ ___  ___ __ _ 
+#  \___ \| '_ \ / _ \/ _ \/ __| '_ \  |  _| | '_ ` _ \ / _ \| __| |/ _ \| '_ \  | |_) / _ \/ __/ _` |
+#   ___) | |_) |  __/  __/ (__| | | | | |___| | | | | | (_) | |_| | (_) | | | | |  _ <  __/ (_| (_| |
+#  |____/| .__/ \___|\___|\___|_| |_| |_____|_| |_| |_|\___/ \__|_|\___/|_| |_| |_| \_\___|\___\__, |
+#        |_|                                                                                   |___/ 
+
+
+# ------------------------ python venv -----------------------
+# Virtual environment 
 python -m venv myenv
 
 # Activate virtual env
 # Linux
-source venv/bin/activate    # deactivate
+source myenv/bin/activate    # deactivate
 # In CMD
-env/Scripts/activate.bat
+myenv/Scripts/activate.bat
 # In Powershel
-env/Scripts/Activate.ps1
+myenv/Scripts/Activate.ps1
 
 
 # Export dependences
 pip freeze > requirements.txt
-pip install -r requirement.txt
+
+# Install dependences
+pip install -r requirements.txt
 pip list 
 pip show ***
 
@@ -36,8 +49,6 @@ pip show ***
 # scope(可选) scope用于说明 commit 影响的范围，比如数据层、控制层、视图层等等，视项目不同而不同。
 
 
-
-
 # 推送到gitee
 git push -f git@gitee.com:jinglecath/SpeechEmotionRecog.git
 
@@ -47,6 +58,8 @@ git reset --hard origin/main
 git pull
 
 
+
+# ------------------------ train & run ------------------------
 # 运行 加 & 后台运行
 python train.py --help
 # don't use checkpoint

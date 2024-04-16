@@ -25,8 +25,8 @@ LABELS = [
 class SSRNetwork(nn.Module):
     def __init__(self, 
             is_print = False,
-            in_channels: int=39,
-            hidden_layer: list=[26, 13, 5, 1],
+            in_channels: int=768,
+            hidden_layer: list=[128, 8],
             padding: str = "same",
             maxpool_config: dict = None,
             classes: int=8,
@@ -52,7 +52,7 @@ class SSRNetwork(nn.Module):
         """
 
 
-        super().__init__()
+        super(SSRNetwork, self).__init__()
         self.is_print = is_print
         self.in_channels = in_channels
         self.hidden_layer = hidden_layer
@@ -75,70 +75,51 @@ class SSRNetwork(nn.Module):
 
         self.device = device
 
-        self.net = nn.Sequential(
-            nn.BatchNorm1d(in_channels),
-            # 卷积层 + Relu激活层
-            # nn.Conv1d(in_channels=in_channels, out_channels=256, kernel_size=3, padding="same"),
-            # nn.ReLU(),
-            nn.Conv1d(in_channels=in_channels, out_channels=hidden_layer[0], kernel_size=5, padding=self.padding),
-            nn.PReLU(),
-            nn.Conv1d(in_channels=hidden_layer[0], out_channels=hidden_layer[1], kernel_size=5, padding=self.padding),
-            nn.PReLU(),
-            nn.MaxPool1d(kernel_size=maxpool_config["kernal_size"][0], stride=maxpool_config["stride"][0]),
-
-            # Dropout 防止过拟合
-            nn.Dropout(p=0.1),
-
-            # there should be (batch_size, hidden_layer[1], 198)
-            nn.Conv1d(in_channels=hidden_layer[1], out_channels=hidden_layer[2], kernel_size=5, padding=self.padding),
-            nn.PReLU(),
-            nn.Conv1d(in_channels=hidden_layer[2], out_channels=hidden_layer[3], kernel_size=5, padding=self.padding),
-            nn.PReLU(),
-            nn.MaxPool1d(kernel_size=maxpool_config["kernal_size"][1], stride=maxpool_config["stride"][1]),
-
-            # 展平 + 全连接
+        # Sliding window select the [batch_size, win, 768], step size is 50, win is 149(just in 3s)
+        self.step = 50
+        self.win = 149                      # just to 3s
+        self.sliding_win = nn.Sequential(
             nn.Flatten(),
-            nn.Linear(self.out_len2, self.classes),
-            # nn.PReLU()
-            # nn.Softmax(dim=1) #  nn.Softmax is in CrossEntropyLoss, dont use CELoss, this will cause train error
-        )
+            nn.Linear(self.in_channels * self.win, self.hidden_layer[0]),   # (batch_size, win * in_chennels) -> (batch_size, hidden_layer[0])
+            nn.PReLU(),
+            nn.Linear(self.hidden_layer[0], self.hidden_layer[1]),          # (batch_size, hidden_layer[0]) -> (batch_size, self.hidden_layer[1])
+            nn.PReLU()
+        )   # -> (batches, hidden_layer[0])
+
+        self.forward_layer = nn.Sequential(
+            nn.Linear(self.hidden_layer[1], self.classes),
+        )  # -> (batches, classes)
         self.init_weight()
-        self.beta_net = nn.Sequential(
-            nn.Flatten(),
-            nn.Linear(768*149, 1000),
-            nn.PReLU(),
-            nn.Linear(1000, self.classes)
-        )
 
     def init_weight(self):
-        for m in self.net:
-            if isinstance(m, nn.Conv1d):
-                nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
-            elif isinstance(m, nn.BatchNorm1d):
-                nn.init.constant_(m.weight, 1)
-                nn.init.constant_(m.bias, 0)
-            elif isinstance(m, nn.Linear):
+        for m in self.sliding_win:
+            if isinstance(m, nn.Linear):
+                nn.init.normal_(m.weight)
+                nn.init.zeros_(m.bias)
+        for m in self.forward_layer:
+            if isinstance(m, nn.Linear):
                 nn.init.normal_(m.weight)
                 nn.init.zeros_(m.bias)
 
-    def forward(self, paths_or_wave: list, is_seg: bool=False):
-        x = self.extractor(paths_or_wave, is_seg)
-        # x = self.net(x) 这样写无法查看和调试中间参数形状
-        # if self.is_print:
-        #     print(self.out_len1, self.out_len2)
-        # for i in range(len(self.net)):
-        #     x = self.net[i](x)
-        #     if self.is_print:
-        #         print(self.net[i], x.shape)
-        #         print("-----------------------------------------------------------------------------------------------------")
-        # return x
-        if self.is_print:
-            print(self.out_len1, self.out_len2)
-        for i in range(len(self.beta_net)):
-            x = self.beta_net[i](x)
-            if self.is_print:
-                print(self.beta_net[i], x.shape)
-                print("-----------------------------------------------------------------------------------------------------")
+    def forward(self, paths: list):
+        # x <- (batch)
+        x = self.extractor(paths)
+
+        # sliding windows, (batches, frames, 768)
+        start = 0
+        wx = 0
+        while True:
+            if (start + self.win) <= x.shape[1]:
+                wx += self.sliding_win(x[:, start:(start + self.win):, :])
+            else:
+                # last time, if not over win/2 , compute.
+                if (start + self.win - x.shape[1]) < self.win / 2:
+                    wx += self.sliding_win(x[:, (x.shape[1] - self.win)::, :])
+                break
+            start += self.step
+
+        # (batches, win) -> (batches, classes)
+        x = self.forward_layer(wx)
         return x
         
     
@@ -168,10 +149,6 @@ class SSRNetwork(nn.Module):
     def get_wav2vec2_exractor(self):
         model_name = "facebook/wav2vec2-base-960h"
         saved_path = "checkpoints/pretrained"
-        # if self.infer:
-        #     processor = Wav2Vec2Processor
-        #     model = Wav2Vec2Model
-        #     return (processor, model)
         
         if os.path.exists(saved_path + '/' + 'preprocessor_config.json'):
             processor = Wav2Vec2Processor.from_pretrained(saved_path)
@@ -183,37 +160,41 @@ class SSRNetwork(nn.Module):
             processor.save_pretrained(saved_path)
         return (processor, model)
     
-    def extractor(self, paths_or_wave, is_seg: bool=False):
-        feats = torch.Tensor([]).to(self.device)
-        if is_seg:
-            for wave in paths_or_wave:
-                feats = self._get_feats(wave, feats)
-        else:
-            for path in paths_or_wave:
-                X, sample_rate = librosa.load(path, sr=self.sr, offset=0, duration=3.0)
-                feats = self._get_feats(X, feats)
-            # print(feats.shape)
+    def extractor(self, paths):
+        feats = self._get_feats_by_processor(paths)
 
-        feats = torch.Tensor(feats).to(self.device)
         # torch.Size([1, 249, 768]) 249 represent time domain, 768 is general feature(is solidable)
-        # 3 dim transpose [batch_size, 249, 768] -> [batch_size, 768, 249]
-        
-        ret = self.postprocessor(feats).last_hidden_state.permute(0, 2, 1).to(self.device)     
+        # 3 dim transpose [batch_size, 249, 768]
+        ret = self.postprocessor(feats).last_hidden_state.to(self.device)   
+
         if self.is_print:
             print(feats.shape)
             print(ret.shape)
         return ret
     
-    def _get_feats(self, X, feats):
-        feat = self.processor(X, return_tensors="pt", sampling_rate=self.sr).input_values.to(self.device)
-        
-        # torch.Size([1, 48000]),  Segment is 5s, sampling_rate is 16000, so get 48000 samples by precessor.
-        if feat.shape[1] != 48000:   # padding
-            feat = F.pad(feat, (0, 48000 - feat.shape[1], 0, 0), 'constant', value=0)
-        if len(feats) == 0 :
-            feats = feat
-        else:
-            feats = torch.cat((feats, feat), dim=0)
+    def _get_feats_by_processor(self, paths):
+        # TODO 如果提取后的时间帧 小于100，max_length 初始值多大合适
+        max_length = 48000      # 3s
+        temp_feats = []   # a list temply storing the feat(not padding)
+        feats = torch.Tensor([]).to(self.device)    # padded feats
+        for path in paths:
+            # start from 0.0s and select all the audio
+            X, sample_rate = librosa.load(path, sr=self.sr, offset=0)
+            # torch.Size([1, 48000]),  if segment is 3s, sampling_rate is 16000, so get 48000 samples by precessor.
+            feat = self.processor(X, return_tensors="pt", sampling_rate=self.sr).input_values.to(self.device)
+            temp_feats.append(feat)
+            max_length = feat.shape[1] if (feat.shape[1] > max_length) else max_length
+
+        # Collate there by padding 0
+        for feat in temp_feats:
+            if feat.shape[1] < max_length:
+                feat = F.pad(feat, (0, max_length - feat.shape[1], 0, 0), 'constant', value=0)
+            # tranfer to feats
+            if len(feats) == 0 :
+                feats = feat
+            else:
+                feats = torch.cat((feats, feat), dim=0)
+        # each data in batch have the same length(max_length)
         return feats
 
 
