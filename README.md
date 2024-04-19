@@ -4,15 +4,15 @@ Hi, here....
 
 ```
   ____    _____   ____  
- / ___|  | ____|   |  _ \ 
+ / ___|  | ____|  |  _ \ 
  \___ \  |  _|    | |_) |
   ___) | | |___   |  _ < 
  |____/  |_____|  |_| \_\  
 ```
 
 ## 🔍Dataset
-
 Download dataset from kaggle [Ryerson Audio-Visual Database of Emotional Speech and Song (RAVDESS)](https://www.kaggle.com/datasets/uwrfkaggler/ravdess-emotional-speech-audio).
+> Notice that wav files of  `dataset/archive` is incomplete, just a part of RAVDESS. If you download the datasets, replace of all files of `dataset/archive`.
 
 ### 1.1 Files
 
@@ -89,7 +89,7 @@ Download checkpoints by [BaiduNetDisk](https://pan.baidu.com/s/1GqLkkeJ-nS2Rpxna
 
 ![contrast group](assets/contrast.png)
 
-Notice that there are redundance parameters in .pth file of `step-xxx` directory, including scheduler params、optimizer params and so on.
+Notice that there are redundant parameters in .pth file of `step-xxx` directory, including scheduler params、optimizer params and so on.
 
 ## 🏆Evaluation
 
@@ -97,15 +97,15 @@ On the test dataset, here are some metrics.
 
 ### 4.1 Metric scores:
 
-<img src="assets/eval_coeffs.png" alt="scores" style="height: 500px;" />
+<img src="assets/eval_coeffs.png" alt="scores" style="height: 400px;" />
 
 ### 4.2 Confusion matrix:
 
-<img src="assets/confusion_matrix.png" alt="confusion matrix" style="height: 500px;" />
+<img src="assets/confusion_matrix.png" alt="confusion matrix" style="height: 400px;" />
 
 ### 4.3 Radar chart:
 
-<img src="assets/eval_radar.png" alt="radar chart" style="height: 500px;" />
+<img src="assets/eval_radar.png" alt="radar chart" style="height: 400px;" />
 
 
 
