@@ -1,11 +1,20 @@
+# venv 
 myenv/
-# datasets/archive/
+
+# datasets
+datasets/archive/*
+# test
 tests/
+
+# checkpoint files
+checkpoints/init
+checkpoints/cmodel
+checkpoints/step-50
+checkpoints/step-100
+checkpoints/step-149
+checkpoints/SSR_checkpoint.pt
+
+# cache files
 __pycache__/
 */__pycache__/
-train.log
-records/*.csv
 .ipynb_checkpoints/
-checkpoints/pretrained
-checkpoints/3rd
-checkpoints/SSR_checkpoint.pt

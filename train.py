@@ -15,11 +15,13 @@ from sklearn.metrics import classification_report
 from dataset import SpeechDataset
 from dataproc import get_wav2vec2_exractor, extractor
 from utils.logtool import log, myLogger
-from model.single_sentence_recog import SSRNetwork, LABELS
+from model.SSR import SSRNetwork, LABELS
 from utils.plot import plot_coffusion_matrix
 
 # Get a logger by filename.
-logger = myLogger(filename=__file__.split('.')[0] + '.log').get_logger
+_path, _file = os.path.split(__file__)
+_filename, _ = os.path.splitext(_file)
+logger = myLogger(filename=_path + "/records/" + _filename +  ".log").get_logger
 
 @log("info", "Train the model.")
 def train(

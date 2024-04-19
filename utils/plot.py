@@ -1,16 +1,21 @@
+import glob
+import os
 import sys
+from collections import Counter
+
 import librosa
 import librosa.display
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import sklearn.metrics as mt
-import glob
-import os, sys
-import matplotlib.pyplot as plt
 import scipy.io.wavfile as swf
+import sklearn.metrics as mt
 
-sys.path.append(r"C:\Users\21552\Desktop\Main\Projects\SpeechMotionRecog")
-from model.single_sentence_recog import LABELS
+PROJECT_PATH = r"C:/Users/21552/Desktop/Main/Projects/SpeechMotionRecog"
+sys.path.append(PROJECT_PATH)
+
+from model.SSR import LABELS
+
 
 def draw_waveform(path: str, savepth: str,  start: int, end: int):
     """draw a waveform of the given path
@@ -82,7 +87,7 @@ def plot_coffusion_matrix(groundtruth: list, pred: list):
     
     # 使用sklearn工具包中的ConfusionMatrixDisplay可视化混淆矩阵，参考plot_confusion_matrix
     fig, ax = plt.subplots(figsize=(6, 6.1))
-    ax.set_title("Confusion matrix")
+    ax.set_title("Confusion matrix", fontsize=15)
     disp = mt.ConfusionMatrixDisplay(confusion_matrix=confusion_mat, display_labels=LABELS)
     disp.plot(
         include_values=True,            # 混淆矩阵每个单元格上显示具体数值
@@ -91,12 +96,12 @@ def plot_coffusion_matrix(groundtruth: list, pred: list):
         xticks_rotation="vertical",   
         values_format="d"               # 显示的数值格式
     )
-    plt.savefig("imgs/confusion_matrix.png", dpi=600)
+    plt.savefig("assets/confusion_matrix.png", dpi=600)
     plt.show()
 
 
-def plot_loss():
-    df = pd.read_csv("checkpoints/3rd/train_eval.csv")
+def plot_loss(path: str="../records/train_eval.csv"):
+    df = pd.read_csv(path)
     # print(df.head(5))
 
     # df.plot()
@@ -117,11 +122,11 @@ def plot_loss():
     ax.set_ylabel("Avarage loss")
     ax.legend()
 
-    plt.savefig("imgs/loss.png", dpi=600)
+    plt.savefig("../assets/train_loss.png", dpi=600)
 
 
-def plot_eval_coeffs():
-    df = pd.read_csv("checkpoints/3rd/train_eval.csv")
+def plot_eval_coeffs(path: str="../records/train_eval.csv"):
+    df = pd.read_csv(path)
     # prepare data
     epoch = df["epoch"].tolist()
     lr = df["lr"].tolist()
@@ -137,7 +142,7 @@ def plot_eval_coeffs():
     # acc = [( acc[i] * 0.01 + acc[i - 1] * 0.99 ) if i >= 50 else acc[i] for i in range(len(acc)) ]
 
 
-    # resample per 20 points
+    # resample per 20 points(downsample)
     epoch = [epoch[i] for i in range(len(epoch)) if (i % 20 == 0) ]
     acc = [acc[i] for i in range(len(acc)) if i % 20 == 0 ]
     prec = [prec[i] for i in range(len(prec)) if i % 20 == 0 ]
@@ -154,10 +159,120 @@ def plot_eval_coeffs():
     axs.set_ylabel("Value")
 
     axs.legend()
-    plt.savefig("imgs/eval_coeffs.png", dpi=600)
+    plt.savefig("../assets/eval_coeffs.png", dpi=600)
 
-# if __name__ == '__main__':
-#     # draw_waveform(path="datasets/archive/Actor_01/03-01-01-01-01-01-01.wav", savepth="imgs/wvfm2.png", start=49, end=50)
-#     draw_spectrogram(r"datasets\archive\Actor_01\03-01-01-01-01-01-01.wav", "imgs/speech_spectrum")
-    # plot_loss()
-    # plot_eval_coeffs()
+def plot_radar(labels, preds):
+    labels_count = Counter(labels)
+    preds_count = Counter(preds)
+
+    catagories = len(LABELS)
+    labels = [ labels_count[i]  for i in range(catagories)]
+    labels = np.concatenate((labels, [labels[0]]))      # 闭合
+    preds = [ preds_count[i]  for i in range(catagories)]
+    preds = np.concatenate((preds, [preds[0]]))         # 闭合
+    angles = [ (i / catagories) * 2 * np.pi for i in range(catagories)]
+    _angles = angles
+    angles = np.concatenate((angles, [angles[0]]))      # 闭合
+    names = LABELS
+    names.append(LABELS[0])
+
+    ax = plt.subplot(111, projection = 'polar')
+    # plt.ylim(0, np.amax(labels))
+
+    # ax.set_thetagrids(angles * 180 / np.pi, names)
+
+    ax.plot(angles, labels, "b-", linewidth=1, label="Ground truth")
+    ax.fill(angles, labels, 'b', alpha=0.2)         # fill the aere
+    ax.plot(angles, preds, "r-", linewidth=1, label="Prediction")
+    ax.fill(angles, preds, 'r', alpha=0.1)
+
+    # ax.set_ylim(0, max(labels))
+    ax.legend(bbox_to_anchor=(0.1, 0.1))
+    plt.xticks(angles, names)
+    ax.set_title("Radar map", fontsize=15)
+    plt.savefig("assets/eval_radar.png", dpi=600)
+    plt.show()
+
+def plot_contrast():
+    df = []
+    df.append(pd.read_csv("../checkpoints/step-50/train_eval.csv"))
+    df.append(pd.read_csv("../checkpoints/step-100/train_eval.csv"))
+    df.append(pd.read_csv("../checkpoints/step-149/train_eval.csv"))
+
+    fig, axs = plt.subplots(2, 4, figsize=(13, 6))
+    
+    #设置主标题
+    fig.suptitle('Contrast Group', fontsize=20)
+    
+    step = 20
+    titles = ["Accuracy", "Recall", "Precision", "f1-score"]
+    locs = ["acc", "prec", "recall", "f1"]
+    for i in range(2):
+        axs[0, i].set_title(titles[i], fontsize=15)
+        axs[0, i].plot(df[0]["epoch"][:500:step], df[0][locs[i]][:500:step], "C0", label="step 50")
+        axs[0, i].plot(df[1]["epoch"][:500:step], df[1][locs[i]][:500:step], "C1", label="step 100")
+        axs[0, i].plot(df[2]["epoch"][:500:step], df[2][locs[i]][:500:step], "C2", label="step 149")
+        axs[0, i].legend()
+
+    for i in range(2):
+        axs[1, i].set_title(titles[i + 2], fontsize=15)
+        axs[1, i].plot(df[0]["epoch"][:500:step], df[0][locs[i + 2]][:500:step], "C0", label="step 50")
+        axs[1, i].plot(df[1]["epoch"][:500:step], df[1][locs[i + 2]][:500:step], "C1", label="step 100")
+        axs[1, i].plot(df[2]["epoch"][:500:step], df[2][locs[i + 2]][:500:step], "C2", label="step 149")
+        axs[1, i].legend()
+    
+    gs = fig.add_gridspec(2, 4)
+    ax = fig.add_subplot(gs[:, 2:])
+    ax.set_title("Training loss", fontsize=15)
+    ax.plot(df[0]["epoch"][:500:step], df[0]["losses"][:500:step], "C0", label="step 50")
+    ax.plot(df[1]["epoch"][:500:step], df[1]["losses"][:500:step], "C1", label="step 100")
+    ax.plot(df[2]["epoch"][:500:step], df[2]["losses"][:500:step], "C2", label="step 149")
+    ax.legend()
+
+    axs[0, 2].xaxis.set_visible(False)
+    axs[0, 3].xaxis.set_visible(False)
+    axs[1, 2].xaxis.set_visible(False)
+    axs[1, 3].xaxis.set_visible(False)
+    axs[0, 2].yaxis.set_visible(False)
+    axs[0, 3].yaxis.set_visible(False)
+    axs[1, 2].yaxis.set_visible(False)
+    axs[1, 3].yaxis.set_visible(False)
+    
+    plt.subplots_adjust(wspace = 0.24, hspace = 0.37)   #调整子图间距
+    plt.savefig("../assets/contrast.png")
+    plt.show()
+
+def plot_bar(labels, preds):
+    labels_count = Counter(labels)
+    preds_count = Counter(preds)
+
+    catagories = len(LABELS)
+    labels = [ labels_count[i]  for i in range(catagories)]
+    preds = [ preds_count[i]  for i in range(catagories)]
+    bar_width = 0.35
+
+    plt.bar(np.arange(len(LABELS)), labels, label = 'Groundtruth', color = 'C0', alpha = 0.7, width = bar_width)
+    plt.bar(np.arange(len(LABELS)) + bar_width, preds, label= 'Prediction', color = 'C1', alpha =  0.7, width = bar_width)
+
+    plt.xticks(np.arange(len(LABELS)) + bar_width / 2, LABELS)
+    plt.xlabel('Classes')
+    plt.ylabel('Numbers')
+    plt.title('Bar chart of evaluation', fontsize=15)
+
+    for x, y in enumerate(labels):
+        plt.text(x, y+100, '%s' %y, ha = 'center')
+    
+    for x, y in enumerate(preds):
+        plt.text(x + bar_width, y + 100, '%s' %y, ha = 'center')
+    
+    plt.legend()
+    plt.savefig("assets/eval_bar.png", dpi=600)
+    plt.show()
+
+
+if __name__ == '__main__':
+    # draw_waveform(path="datasets/archive/Actor_01/03-01-01-01-01-01-01.wav", savepth="assets/wvfm2.png", start=49, end=50)
+    # draw_spectrogram(r"datasets\archive\Actor_01\03-01-01-01-01-01-01.wav", "assets/speech_spectrum")
+    plot_loss()
+    plot_eval_coeffs()
+    plot_contrast()

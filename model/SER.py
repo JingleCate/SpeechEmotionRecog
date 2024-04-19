@@ -1,3 +1,5 @@
+# This file has been deprecated
+
 import sys
 import torch
 import librosa
@@ -5,7 +7,7 @@ import librosa
 import torch.nn as nn
 
 sys.path.append("C:/Users/21552/Desktop/Main/Projects/SpeechMotionRecog")
-from model.single_sentence_recog import LABELS, SSRNetwork
+from model.SSR import LABELS, SSRNetwork
 
 class SER(nn.Module):
     def __init__(self, 

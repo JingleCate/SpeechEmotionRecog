@@ -1,3 +1,5 @@
+# 🚀 Single sentence emotion recognition(SSR) model
+
 import os
 import sys
 import torch
@@ -10,6 +12,7 @@ PROJECT_PATH = r"C:/Users/21552/Desktop/Main/Projects/SpeechMotionRecog"
 sys.path.append(PROJECT_PATH)
 
 from transformers import Wav2Vec2Processor, Wav2Vec2Model
+from typing import Union
 
 LABELS = [
      "neutral",
@@ -30,8 +33,7 @@ class SSRNetwork(nn.Module):
             padding: str = "same",
             maxpool_config: dict = None,
             classes: int=8,
-            infer: bool = False,
-            device: str = "cpu"
+            device: str = "cpu",
         ):
         """Classificator of a single audio.
         
@@ -58,7 +60,6 @@ class SSRNetwork(nn.Module):
         self.hidden_layer = hidden_layer
         self.padding = padding
         self.classes = classes
-        self.infer = infer
 
         self.sr = 16000
 
@@ -75,8 +76,12 @@ class SSRNetwork(nn.Module):
 
         self.device = device
 
-        # Sliding window select the [batch_size, win, 768], step size is 50, win is 149(just in 3s)
-        self.step = 50
+        # Sliding window select the [batch_size, win, 768], step size is 149, win is 149(just in 3s)
+        # 🎯 Althongh you can specify the step size there(50, 100, 150), however,
+        # 🎯 according to my experiment, self.step = self.win has the best effect.
+        # 🎯 if you need checkpoints of other steps ,you can download from 
+        # 🎯 BaiduNetDisk https://pan.baidu.com/s/1GqLkkeJ-nS2RpxnairJP5A?pwd=xuwe
+        self.step = 149             
         self.win = 149                      # just to 3s
         self.sliding_win = nn.Sequential(
             nn.Flatten(),
@@ -89,7 +94,7 @@ class SSRNetwork(nn.Module):
         self.forward_layer = nn.Sequential(
             nn.Linear(self.hidden_layer[1], self.classes),
         )  # -> (batches, classes)
-        self.init_weight()
+        # self.init_weight()
 
     def init_weight(self):
         for m in self.sliding_win:
@@ -101,26 +106,31 @@ class SSRNetwork(nn.Module):
                 nn.init.normal_(m.weight)
                 nn.init.zeros_(m.bias)
 
-    def forward(self, paths: list):
-        # x <- (batch)
+    def forward(self, paths: Union[list, str]) -> torch.Tensor:
+        # x <- (batch, frames, 768)
+        paths = [paths] if not isinstance(paths, list) else paths
         x = self.extractor(paths)
 
-        # sliding windows, (batches, frames, 768)
+        # sliding windows, (batches, win, 768)
         start = 0
-        wx = 0
+        sx = 0
+        logits = 0
         while True:
             if (start + self.win) <= x.shape[1]:
-                wx += self.sliding_win(x[:, start:(start + self.win):, :])
+                seg = x[:, start:(start + self.win):, :]
+                sx = self.sliding_win(seg)
             else:
                 # last time, if not over win/2 , compute.
                 if (start + self.win - x.shape[1]) < self.win / 2:
-                    wx += self.sliding_win(x[:, (x.shape[1] - self.win)::, :])
+                    seg = x[:, (x.shape[1] - self.win)::, :]
+                    sx = self.sliding_win(seg)
                 break
             start += self.step
+            logits += sx
+        
+        logits = self.forward_layer(logits)
 
-        # (batches, win) -> (batches, classes)
-        x = self.forward_layer(wx)
-        return x
+        return logits
         
     
     def compute_output_len(self, maxpool_config):
@@ -148,7 +158,8 @@ class SSRNetwork(nn.Module):
     # @staticmethod
     def get_wav2vec2_exractor(self):
         model_name = "facebook/wav2vec2-base-960h"
-        saved_path = "checkpoints/pretrained"
+        saved_path = "checkpoints/init"
+        
         
         if os.path.exists(saved_path + '/' + 'preprocessor_config.json'):
             processor = Wav2Vec2Processor.from_pretrained(saved_path)
@@ -173,7 +184,6 @@ class SSRNetwork(nn.Module):
         return ret
     
     def _get_feats_by_processor(self, paths):
-        # TODO 如果提取后的时间帧 小于100，max_length 初始值多大合适
         max_length = 48000      # 3s
         temp_feats = []   # a list temply storing the feat(not padding)
         feats = torch.Tensor([]).to(self.device)    # padded feats

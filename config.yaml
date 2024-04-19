@@ -1,28 +1,28 @@
 train:
-  epochs: 1000
-  batch_size: 8
-  learning_rate: 1e-4
-  num_workers: 0
-  resume: False
-  checkpoint_path: checkpoints/SSR_epoch_x_acc_x.pth
+  epochs: 1000          # number of epochs
+  batch_size: 8         # number of batches
+  learning_rate: 1e-4   # learning rate
+  num_workers: 0        # number of workers loading dataset, default is 0 for dataset is not too large
+  resume: False         # whether to resume the training 
+  checkpoint_path: checkpoints/SSR_checkpoint.pt
   lr: 1e-4
-  patience: 3
-  factor: 0.95
+  patience: 3           # scehduler patience which is used to decrease learning rate
+  factor: 0.95          # scehduler decrease factor
 
 single_speech_recog_net:
-  in_channels: 768
-  in_length: 149
-  classes: 8
-  padding: same
-  hidden_layer: 
+  checkpoint_path: checkpoints/SSR_checkpoint.pt  
+  in_channels: 768      # each frame has 768 dims
+  in_length: 149        # just for reference, this is used to compute the output size
+  classes: 8            # emotion classes
+  padding: same         # Conv1d padding mode
+  hidden_layer:         # hidden layer for sliding window
     - 1024
-    - 128
-  maxpool:
+    - 8
+  maxpool:              # max pool has been deprecated in sliding window model
     layers: 2 
-    # the 2nd in_len is invalid, just as a reference.
     in_len:
-      - 149
-      - 64
+      - 149             # 3s segment
+      - 64              # the 2nd in_len is invalid, just as a reference.
     pool_padding_size:
       - 0
       - 0
