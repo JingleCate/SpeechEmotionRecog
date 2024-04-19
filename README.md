@@ -3,11 +3,11 @@
 Hi, here....
 
 ```
-  ____  _____ ____  
- / ___|| ____|  _ \ 
- \___ \|  _| | |_) |
-  ___) | |___|  _ < 
- |____/|_____|_| \_\  
+  ____    _____   ____  
+ / ___|  | ____|   |  _ \ 
+ \___ \  |  _|    | |_) |
+  ___) | | |___   |  _ < 
+ |____/  |_____|  |_| \_\  
 ```
 
 ## 🔍Dataset
@@ -18,7 +18,7 @@ Download dataset from kaggle [Ryerson Audio-Visual Database of Emotional Speech 
 
 ​	This portion of the RAVDESS contains 1440 files: 60 trials per actor x 24 actors = 1440. The RAVDESS contains 24 professional actors (12 female, 12 male), vocalizing two lexically-matched statements in a neutral North American accent. Speech emotions includes calm, happy, sad, angry, fearful, surprise, and disgust expressions. Each expression is produced at two levels of emotional intensity (normal, strong), with an additional neutral expression.
 
-![labels](https://storage.googleapis.com/kaggle-datasets-images/107620/256618/6b13d2f1d0b8d8a00b5aac95477c79a2/dataset-cover.png?t=2019-01-19-18-55-36)
+![labels](assets/dataset-cover.png)
 
 ### 1.2 File naming convention
 
@@ -97,15 +97,15 @@ On the test dataset, here are some metrics.
 
 ### 4.1 Metric scores:
 
-<img src="assets/eval_coeffs.png" alt="scores" style="zoom:67%;" />
+<img src="assets/eval_coeffs.png" alt="scores" style="height: 500px;" />
 
 ### 4.2 Confusion matrix:
 
-<img src="assets/confusion_matrix.png" alt="confusion matrix" style="zoom: 67%;" />
+<img src="assets/confusion_matrix.png" alt="confusion matrix" style="height: 500px;" />
 
 ### 4.3 Radar chart:
 
-<img src="assets/eval_radar.png" alt="radar chart" style="zoom:67%;" />
+<img src="assets/eval_radar.png" alt="radar chart" style="height: 500px;" />
 
 
 
