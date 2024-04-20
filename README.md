@@ -111,7 +111,7 @@ On the test dataset, here are some metrics.
 
 <img src="assets/eval_roc.png" alt="ROC on multiclass by one-vs-rest" style="height: 500px;" />
 
-## 🔭 Futur works
+## 🔭 Future works
 1. fine tuning the Wav2Vec2(Unfreeze parameter)
 2. Extend datasets
 3. Multi model data
