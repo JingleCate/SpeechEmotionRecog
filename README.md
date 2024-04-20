@@ -112,11 +112,13 @@ On the test dataset, here are some metrics.
 <img src="assets/eval_roc.png" alt="ROC on multiclass by one-vs-rest" style="height: 500px;" />
 
 ## 🔭 Future works
-1. fine tuning the Wav2Vec2(Unfreeze parameter)
-2. Extend datasets
-3. Multi model data
-4. Evaluate the model using deepcheck
-5. ROC and AUC(How to plot ROC by threshold)
+- [ ] fine tuning the Wav2Vec2(Unfreeze parameter)
+- [ ] Extend datasets
+- [ ] Multi model data
+- [ ] Evaluate the model using deepcheck
+- [x] ROC and AUC(How to plot ROC by threshold)
+
+
 
 
 
