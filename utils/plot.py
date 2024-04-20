@@ -339,7 +339,7 @@ def plot_macro_roc(labels, probs: np.ndarray):
         mt.RocCurveDisplay.from_predictions(
             one_hot_labels[:, class_id],
             probs[:, class_id],
-            name=f"{LABELS[class_id]}(AUC = {roc_auc[class_id]:.2f})",
+            name=f"{LABELS[class_id]}",
             lw=1.5,
             linestyle=":",
             alpha=0.8,
