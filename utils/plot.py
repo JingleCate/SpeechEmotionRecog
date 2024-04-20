@@ -10,6 +10,9 @@ import numpy as np
 import pandas as pd
 import scipy.io.wavfile as swf
 import sklearn.metrics as mt
+from sklearn.preprocessing import LabelBinarizer
+from itertools import cycle
+
 
 PROJECT_PATH = r"C:/Users/21552/Desktop/Main/Projects/SpeechMotionRecog"
 sys.path.append(PROJECT_PATH)
@@ -269,6 +272,90 @@ def plot_bar(labels, preds):
     plt.savefig("assets/eval_bar.png", dpi=600)
     plt.show()
 
+
+def plot_macro_roc(labels, probs: np.ndarray):
+    """Plot roc curve function
+
+    Parameters
+    ----------
+    `labels`: ArrayLike
+        Sample labels
+    `probs`: ArrayLike(n_samples, n_classes)
+        Probabilities, 2-dim.
+    """
+    lb = LabelBinarizer().fit(labels)
+    one_hot_labels = lb.transform(labels)
+
+    # store the fpr, tpr, and roc_auc for all averaging strategies
+    fpr, tpr, thres, roc_auc = dict(), dict(), dict(), dict()
+    for i in range(len(lb.classes_)):
+        fpr[i], tpr[i], thres[i] = mt.roc_curve(one_hot_labels[:, i], probs[:, i])
+        roc_auc[i] = mt.auc(fpr[i], tpr[i])
+
+    fpr_grid = np.linspace(0, 1, 1000)
+    # Interpolate all ROC curves at these points
+    mean_tpr = np.zeros_like(fpr_grid)
+    for i in range(len(lb.classes_)):
+        mean_tpr += np.interp(fpr_grid, fpr[i], tpr[i])  # linear interpolation
+    
+    # Average it and compute Macro AUC
+    mean_tpr /= len(LABELS)
+    fpr["macro"] = fpr_grid
+    tpr["macro"] = mean_tpr
+    roc_auc["macro"] = mt.auc(fpr["macro"], tpr["macro"])
+    print("\n-------------------------------------------------------------------------------")
+    print(f"Macro-averaged One-vs-Rest ROC AUC score: {roc_auc['macro']:.2f}")
+    print("-------------------------------------------------------------------------------\n")
+
+    # Micro
+    fpr["micro"], tpr["micro"], _ = mt.roc_curve(one_hot_labels.ravel(), probs.ravel())
+    roc_auc["micro"] = mt.auc(fpr["micro"], tpr["micro"])
+
+    print("\n-------------------------------------------------------------------------------")
+    print(f"Micro-averaged One-vs-Rest ROC AUC score:\n{roc_auc['micro']:.2f}")
+    print("-------------------------------------------------------------------------------\n")
+    
+    fig, ax = plt.subplots(figsize=(8, 7))
+
+    plt.plot(
+        fpr["macro"],
+        tpr["macro"],
+        label=f"macro-average ROC curve (AUC = {roc_auc['macro']:.2f})",
+        color="b",
+        linewidth=2,
+        alpha=1
+    )
+    plt.plot(
+        fpr["micro"],
+        tpr["micro"],
+        label=f"micro-average ROC curve (AUC = {roc_auc['micro']:.2f})",
+        color="r",
+        linewidth=2,
+        alpha=1
+    )
+    
+    colors = cycle(["C0", "C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8"])
+    for class_id, color in zip(range(len(LABELS)), colors):
+        mt.RocCurveDisplay.from_predictions(
+            one_hot_labels[:, class_id],
+            probs[:, class_id],
+            name=f"{LABELS[class_id]}(AUC = {roc_auc[class_id]:.2f})",
+            lw=1.5,
+            linestyle=":",
+            alpha=0.8,
+            color=color,
+            ax=ax,
+            plot_chance_level=(class_id == 7),
+        )
+    ax.set(
+        xlabel="FPS(False Positive Rate)",
+        ylabel="TPS(True Positive Rate)",
+    )
+    ax.set_title("ROC on One-vs-Rest multiclass", fontsize=15)
+    plt.savefig("assets/eval_roc.png", dpi=600)
+    plt.show()
+
+    
 
 if __name__ == '__main__':
     # draw_waveform(path="datasets/archive/Actor_01/03-01-01-01-01-01-01.wav", savepth="assets/wvfm2.png", start=49, end=50)

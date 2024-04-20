@@ -11,7 +11,7 @@ from dataset import SpeechDataset
 from model.SER import SER
 from model.SSR import LABELS, SSRNetwork
 from utils.logtool import log
-from utils.plot import plot_coffusion_matrix, plot_radar, plot_bar
+from utils.plot import plot_coffusion_matrix, plot_radar, plot_bar, plot_macro_roc
 
 
 def get_eval_scores(labels, preds):
@@ -46,21 +46,30 @@ def eval_model(batch_size: int = 4,
     net.eval()
 
     # test dataset inference
-    total_labels, total_pred = torch.tensor([]).to(device), torch.tensor([]).to(device)
+    total_labels, total_pred, total_prob = torch.tensor([]).to(device), torch.tensor([]).to(device), torch.tensor([]).to(device)
     for idx, sample_batch in enumerate(tqdm(test_dataloader, desc="Processing bar: ")):
             # path, label is a batch list.
             # labels: tensor([2, 4, 6, 2]), values: 0~7 mapping for 8 locations
             paths, labels = sample_batch["path"], (sample_batch["label"] - 1).to(device)
-            outputs = net(paths).to(device)
-            values, predict = torch.max(outputs.data, dim=1)
+            logits = net(paths).to(device)
+            values, predict = torch.max(logits.data, dim=1)
+            prob = torch.nn.functional.softmax(logits, dim=1)
 
             total_labels = torch.hstack((total_labels, labels.data))
             total_pred = torch.hstack((total_pred, predict.data))
+            if len(total_prob) != 0:
+                total_prob = torch.vstack((total_prob, prob))               # (batch_size, classes)
+            else:
+                total_prob = prob
     
     # detach and eval
     total_labels = total_labels.cpu().numpy().astype(int)
     total_pred = total_pred.cpu().numpy().astype(int)
+    # (test_dataset_samples, classes), require grad var need detach
+    total_prob = total_prob.cpu().detach().numpy().astype(float)                 
     correct_rate, macro_prec, macro_recall, macro_f1 = get_eval_scores(total_labels, total_pred)
+
+    plot_macro_roc(total_labels, total_prob)
 
     print("\n-------------------------------------------------------------------------------")
     print("Acuracy: %.3f | macro_precision: %.3f | macro_recall: %.3f | macro_f1: %.3f " %
