@@ -85,11 +85,9 @@ Download checkpoints by [BaiduNetDisk](https://pan.baidu.com/s/1GqLkkeJ-nS2Rpxna
 
 > :warning: All you needed is just `init` directory and `SSR_checkpoint.pt` file. Of course, if you have the need of transfering to other frameworks such as Tensorflow or deploying it, you may need `SSR_checkpoint.onnx` file.
 
-`SSR_checkpoint.pt` is simplified checkpoint of `step-149`. Although you can specify the step size (50, 100, 150), however, according to my experiment, step = win has the best effect. if you need checkpoints of other steps ,you can download `step-50` or `step-100`.
-
+`SSR_checkpoint.pt` is simplified checkpoint of `step-149`. Although you can specify the step size (50, 100, 150), however, according to my experiment, step = win has the best effect. 
 ![contrast group](assets/contrast.png)
-
-Notice that there are redundant parameters in .pth file of `step-xxx` directory, including scheduler params、optimizer params and so on.
+if you need checkpoints of other steps ,you can download `step-50` or `step-100`.Notice that there are redundant parameters in .pth file of `step-xxx` directory, including scheduler params、optimizer params and so on.
 
 ## 🏆Evaluation
 
