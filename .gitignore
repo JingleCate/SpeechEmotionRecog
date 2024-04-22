@@ -13,6 +13,7 @@ checkpoints/step-50
 checkpoints/step-100
 checkpoints/step-149
 checkpoints/SSR_checkpoint.pt
+checkpoints/SSR_checkpoint.onnx
 
 # cache files
 __pycache__/
