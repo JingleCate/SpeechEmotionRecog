@@ -13,7 +13,8 @@ from utils.logtool import log
 
 
 def infer(file: str="datasets/archive/Actor_01/03-01-03-01-01-02-01.wav",
-          is_raw: bool=True):
+          is_raw: bool=True,
+          output_onnx: bool=False):
     """Infer the specified file emotion labels from the raw test dataset or others.
 
     Parameters
@@ -45,7 +46,21 @@ def infer(file: str="datasets/archive/Actor_01/03-01-03-01-01-02-01.wav",
     print("Prob: ", prob)
     pred = np.argmax(prob)
     print("ground truth: ", LABELS[int(label) - 1], "    prediction: ", LABELS[pred])
+    
+    # onnx ouput, warning: if you select this option, you need `pip install oxxn`
+    if output_onnx:
+        input_x = ["./datasets/archive/audio_speech_actors_01-24/Actor_24/03-01-08-01-02-01-24.wav",
+                "./datasets/archive/audio_speech_actors_01-24/Actor_23/03-01-02-02-02-01-23.wav",
+                "./datasets/archive/audio_speech_actors_01-24/Actor_22/03-01-06-01-02-01-22.wav",
+                "./datasets/archive/audio_speech_actors_01-24/Actor_20/03-01-06-01-02-02-20.wav"
+                ]
 
+        torch.onnx.export(net,
+                        input_x,
+                        "./checkpoints/SSR_checkpoint.onnx",
+                        input_names=["audio paths"],
+                        output_names=["Label logits(no softmax)"],
+                        dynamic_axes={"input": {0: "batch"}, "output": {0: "batch"}})
 
 if __name__ == "__main__":
-    infer()
+    infer(output_onnx=False)
