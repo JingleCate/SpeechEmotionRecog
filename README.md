@@ -1,4 +1,4 @@
-# Speech Emotion Recognization
+# Speech Emotion Recognition
 
 Hi, here....
 
